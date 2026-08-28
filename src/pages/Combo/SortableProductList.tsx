@@ -19,14 +19,7 @@ const SortableProductList: React.FC<SortableProductListProps> = ({
   products,
   onRemove,
 }) => {
-  if (products.length === 0) {
-    return (
-      <div className="h-full flex flex-col items-center justify-center text-white/30 py-20">
-        <span className="text-sm">还没有选择产品</span>
-        <p className="text-xs mt-1">从左侧点击「加入搭配」开始</p>
-      </div>
-    );
-  }
+  if (products.length === 0) return null;
 
   return (
     <SortableContext
@@ -70,51 +63,56 @@ const SortableItem: React.FC<SortableItemProps> = ({
     <div
       ref={setNodeRef}
       style={style}
-      className="flex gap-3 p-2.5 mb-2 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 transition-colors backdrop-blur-sm"
+      className="flex items-start gap-2 p-2 rounded-md bg-white border border-gray-200 hover:border-blue-300 hover:shadow-sm transition-all group"
     >
       <div
         {...attributes}
         {...listeners}
-        className="flex items-center text-white/30 cursor-grab active:cursor-grabbing pt-1"
+        className="flex items-center text-gray-300 cursor-grab active:cursor-grabbing pt-1.5 flex-shrink-0"
       >
-        <GripVertical className="w-4 h-4" />
+        <GripVertical className="w-3.5 h-3.5" />
       </div>
-      <div className="relative w-14 h-14 flex-shrink-0 rounded-md overflow-hidden bg-white/5 flex items-center justify-center">
-        <div className="absolute top-0 left-0 z-10 bg-gradient-to-br from-cyan-400 to-blue-500 text-white text-[11px] w-5 h-5 flex items-center justify-center font-bold rounded-br-md">
+
+      <div className="relative w-12 h-12 flex-shrink-0 rounded bg-gray-50 border border-gray-100 overflow-hidden flex items-center justify-center">
+        <div className="absolute top-0 left-0 z-10 bg-gradient-to-br from-blue-500 to-cyan-400 text-white text-[10px] w-4 h-4 flex items-center justify-center font-bold rounded-br">
           {index + 1}
         </div>
         {product.whiteBgImage ? (
           <img
             src={product.whiteBgImage}
             alt={productTitle(product)}
-            className="w-full h-full object-contain p-1"
+            className="w-full h-full object-contain p-0.5"
           />
         ) : (
-          <div className="text-[10px] text-white/30">无图</div>
+          <span className="text-[9px] text-gray-400">无图</span>
         )}
       </div>
-      <div className="flex-1 min-w-0 flex flex-col gap-0.5">
-        <span className="text-[10px] text-cyan-400 font-medium">
+
+      <div className="flex-1 min-w-0">
+        <span className="text-[10px] text-blue-600 font-medium">
           {CATEGORY_LABELS[product.category as ProductCategory]}
         </span>
-        <span className="text-[11px] text-white/50 truncate">
-          {product.brand || '未知品牌'}
-        </span>
-        <h4 className="text-sm font-semibold text-white leading-tight truncate">
+        <h4 className="text-xs font-semibold text-gray-900 leading-tight truncate mt-0.5">
           {productTitle(product)}
         </h4>
+        {product.brand && (
+          <span className="text-[10px] text-gray-500 truncate block">
+            {product.brand}
+          </span>
+        )}
         {product.referencePrice != null && (
-          <span className="text-sm font-bold text-cyan-400 mt-0.5">
+          <span className="text-sm font-bold text-blue-600 mt-0.5 block">
             ¥{Number(product.referencePrice).toLocaleString()}
           </span>
         )}
       </div>
+
       <button
-        className="self-start p-1 text-white/30 hover:text-red-400 transition-colors"
+        className="self-start p-1 text-gray-300 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"
         onClick={() => onRemove(product.id)}
         title="移除"
       >
-        <X className="w-4 h-4" />
+        <X className="w-3.5 h-3.5" />
       </button>
     </div>
   );

@@ -273,9 +273,63 @@ const ComboPage: React.FC = () => {
       </div>
 
       <div className="flex-1 flex overflow-hidden">
-        {/* Left: products */}
-        <section className="flex-1 flex flex-col overflow-hidden border-r border-gray-200 bg-white">
-          <div className="px-4 py-3 border-b border-gray-100">
+        {/* Left: selected list */}
+        <aside className="w-[280px] flex-shrink-0 border-r border-gray-200 bg-white flex flex-col overflow-hidden">
+          <div className="px-4 py-3 border-b border-gray-100 bg-gray-50/50">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-sm font-semibold text-gray-900">
+                  已选产品
+                </h2>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  {selectedProducts.length}/{MAX_ITEMS} 件
+                </p>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                className="text-xs h-7 px-2"
+                disabled={selectedProducts.length === 0}
+                onClick={handleClear}
+              >
+                <X className="w-3 h-3 mr-1" />
+                清空
+              </Button>
+            </div>
+          </div>
+          <div className="flex-1 overflow-y-auto p-2.5 space-y-2">
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragEnd={handleDragEnd}
+              modifiers={modifiers}
+            >
+              <SortableProductList
+                products={selectedProducts}
+                onRemove={handleRemove}
+              />
+            </DndContext>
+            {selectedProducts.length === 0 && (
+              <div className="text-center py-12 text-gray-400 text-xs">
+                从中间列表选择产品
+              </div>
+            )}
+          </div>
+          {selectedProducts.length > 0 && (
+            <div className="border-t border-gray-100 px-4 py-2.5 bg-gray-50/50">
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-gray-500">搭配总价</span>
+                <span className="font-bold text-blue-600">
+                  ¥{totalReference.toLocaleString()}
+                </span>
+              </div>
+            </div>
+          )}
+        </aside>
+
+        {/* Center: products */}
+        <section className="flex-1 flex flex-col overflow-hidden border-r border-gray-200 bg-gray-50">
+          <div className="px-4 py-3 border-b border-gray-200 bg-white">
             <div className="flex items-center gap-2 overflow-x-auto">
               {ALL_CATEGORIES.map((cat: ProductCategory) => (
                 <button
@@ -387,47 +441,37 @@ const ComboPage: React.FC = () => {
           </div>
         </section>
 
-        {/* Right panel */}
-        <DndContext
-          sensors={sensors}
-          collisionDetection={closestCenter}
-          onDragEnd={handleDragEnd}
-          modifiers={modifiers}
-        >
-          <ComboRightPanel
-            selectedProducts={selectedProducts}
-            schemeName={schemeName}
-            livePrice={livePrice}
-            currentSchemeId={currentSchemeId}
-            livePriceNum={livePriceNum}
-            totalReference={totalReference}
-            totalDaily={totalDaily}
-            hasDaily={hasDaily}
-            hasReference={hasReference}
-            showDiff={showDiff}
-            diff={diff}
-            schemes={schemes}
-            schemeDialogOpen={schemeDialogOpen}
-            saveDialogOpen={saveDialogOpen}
-            onSchemeNameChange={setSchemeName}
-            onLivePriceChange={setLivePrice}
-            onClear={handleClear}
-            onSaveAs={handleSaveAs}
-            onOverwrite={handleOverwrite}
-            onConfirmSave={handleConfirmSave}
-            onLivePreview={handleLivePreview}
-            onOpenSchemes={handleOpenSchemes}
-            onLoadScheme={handleLoadScheme}
-            onDeleteScheme={handleDeleteScheme}
-            onSchemeDialogChange={setSchemeDialogOpen}
-            onSaveDialogChange={setSaveDialogOpen}
-          >
-            <SortableProductList
-              products={selectedProducts}
-              onRemove={handleRemove}
-            />
-          </ComboRightPanel>
-        </DndContext>
+        {/* Right: price panel */}
+        <ComboRightPanel
+          selectedProducts={selectedProducts}
+          schemeName={schemeName}
+          livePrice={livePrice}
+          currentSchemeId={currentSchemeId}
+          livePriceNum={livePriceNum}
+          totalReference={totalReference}
+          totalDaily={totalDaily}
+          hasDaily={hasDaily}
+          hasReference={hasReference}
+          showDiff={showDiff}
+          diff={diff}
+          schemes={schemes}
+          schemeDialogOpen={schemeDialogOpen}
+          saveDialogOpen={saveDialogOpen}
+          onSchemeNameChange={setSchemeName}
+          onLivePriceChange={setLivePrice}
+          onClear={handleClear}
+          onSaveAs={handleSaveAs}
+          onOverwrite={handleOverwrite}
+          onConfirmSave={handleConfirmSave}
+          onLivePreview={handleLivePreview}
+          onOpenSchemes={handleOpenSchemes}
+          onLoadScheme={handleLoadScheme}
+          onDeleteScheme={handleDeleteScheme}
+          onSchemeDialogChange={setSchemeDialogOpen}
+          onSaveDialogChange={setSaveDialogOpen}
+          onRemoveProduct={handleRemove}
+          onGoSelect={() => {}}
+        />
       </div>
     </div>
   );

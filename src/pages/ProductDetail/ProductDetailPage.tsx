@@ -8,6 +8,11 @@ import {
   X,
   Video,
   Settings,
+  DollarSign,
+  Info,
+  Droplets,
+  ShieldCheck,
+  ImageIcon,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { getProduct } from '@/api/products';
@@ -16,7 +21,11 @@ import type {
   CategoryFieldConfig,
   ProductCategory,
 } from '@/types';
-import { CATEGORY_FIELDS, CATEGORY_LABELS, PRICE_KEYS } from '@/utils/constants';
+import {
+  CATEGORY_FIELDS,
+  CATEGORY_LABELS,
+  PRICE_KEYS,
+} from '@/utils/constants';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import {
@@ -24,7 +33,7 @@ import {
   DialogContent,
   DialogClose,
 } from '@/components/ui/Dialog';
-import { groupFields, type FieldGroup } from './detail-helpers';
+import { groupFields, type FieldGroup, renderFieldValue, cn } from './detail-helpers';
 
 const ProductDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -33,9 +42,9 @@ const ProductDetailPage: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [activeImage, setActiveImage] = useState<number>(0);
-  const [activeVideo, setActiveVideo] = useState<number>(0);
   const [lightboxOpen, setLightboxOpen] = useState<boolean>(false);
   const [videoDialogOpen, setVideoDialogOpen] = useState<boolean>(false);
+  const [activeVideo, setActiveVideo] = useState<number>(0);
 
   useEffect(() => {
     if (!id) {
@@ -86,6 +95,11 @@ const ProductDetailPage: React.FC = () => {
     return list;
   }, [product]);
 
+  const realImages: string[] = useMemo(() => {
+    if (!product || !Array.isArray(product.realImages)) return [];
+    return product.realImages.filter((v: string) => Boolean(v));
+  }, [product]);
+
   const realVideos: string[] = useMemo(() => {
     if (!product) return [];
     return Array.isArray(product.realVideos)
@@ -100,15 +114,15 @@ const ProductDetailPage: React.FC = () => {
 
   const handlePrevImage = useCallback(() => {
     setActiveImage((prev: number) =>
-      prev <= 0 ? allImages.length - 1 : prev - 1,
+      prev <= 0 ? realImages.length - 1 : prev - 1,
     );
-  }, [allImages.length]);
+  }, [realImages.length]);
 
   const handleNextImage = useCallback(() => {
     setActiveImage((prev: number) =>
-      prev >= allImages.length - 1 ? 0 : prev + 1,
+      prev >= realImages.length - 1 ? 0 : prev + 1,
     );
-  }, [allImages.length]);
+  }, [realImages.length]);
 
   const handleBack = useCallback(() => {
     if (window.history.length > 1) {
@@ -118,47 +132,10 @@ const ProductDetailPage: React.FC = () => {
     }
   }, [navigate]);
 
-  function renderFieldValue(
-    field: CategoryFieldConfig,
-    value: unknown,
-  ): React.ReactNode {
-    const isPrice = PRICE_KEYS.has(String(field.key));
-
-    if (
-      value === null ||
-      value === undefined ||
-      value === '' ||
-      (Array.isArray(value) && value.length === 0)
-    ) {
-      return <span className="text-gray-300">-</span>;
-    }
-
-    if (field.type === 'boolean') {
-      return value ? (
-        <Badge variant="success">是</Badge>
-      ) : (
-        <Badge variant="secondary">否</Badge>
-      );
-    }
-
-    if (field.type === 'image') {
-      return value ? '已上传' : '-';
-    }
-
-    if (field.type === 'images') {
-      return `${(value as string[]).length} 张`;
-    }
-
-    if (field.type === 'videos') {
-      return `${(value as string[]).length} 个`;
-    }
-
-    if (isPrice) {
-      return `¥${Number(value).toLocaleString()}`;
-    }
-
-    return String(value);
-  }
+  const openImageLightbox = (index: number) => {
+    setActiveImage(index);
+    setLightboxOpen(true);
+  };
 
   if (loading) {
     return (
@@ -195,6 +172,24 @@ const ProductDetailPage: React.FC = () => {
     );
   }
 
+  const baseInfoItems: Array<{ label: string; value: React.ReactNode }> = [
+    { label: '品牌', value: product.brand || '-' },
+    { label: '产品名称', value: product.name || '-' },
+    { label: '型号', value: product.model || '-' },
+    {
+      label: '上架年份',
+      value: product.launchYear ? `${product.launchYear}款` : '-',
+    },
+    {
+      label: '销售状态',
+      value: product.isOnSale ? (
+        <Badge variant="success">在售</Badge>
+      ) : (
+        <Badge variant="secondary">下架</Badge>
+      ),
+    },
+  ];
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Top bar */}
@@ -207,9 +202,7 @@ const ProductDetailPage: React.FC = () => {
             <ChevronLeft className="w-4 h-4" />
             返回
           </button>
-          <div className="text-sm font-medium text-gray-900">
-            产品详情
-          </div>
+          <div className="text-sm font-medium text-gray-900">产品详情</div>
           <Button
             size="sm"
             variant="outline"
@@ -221,29 +214,10 @@ const ProductDetailPage: React.FC = () => {
       </div>
 
       <div className="max-w-5xl mx-auto px-6 py-6 space-y-4">
-        {/* Header + Main image */}
+        {/* 主图 + 标题 + 基础信息 */}
         <div className="bg-white rounded-md border border-gray-200 shadow-sm overflow-hidden">
-          <div className="px-6 py-4 border-b border-gray-100">
-            <div className="flex items-center gap-2 mb-2 flex-wrap">
-              <Badge variant="black">{CATEGORY_LABELS[category]}</Badge>
-              {product.isOnSale ? (
-                <Badge variant="success">在售</Badge>
-              ) : (
-                <Badge variant="secondary">下架</Badge>
-              )}
-              {product.launchYear && (
-                <Badge variant="outline">{product.launchYear}款</Badge>
-              )}
-            </div>
-            <h1 className="text-xl font-bold text-gray-900">
-              {product.name || product.model || '产品名称'}
-            </h1>
-            {product.brand && (
-              <p className="text-sm text-gray-500 mt-1">{product.brand}</p>
-            )}
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-6 border-b border-gray-100">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-6">
+            {/* 主图 */}
             <div className="flex flex-col">
               <div
                 className={`aspect-square bg-gradient-to-b from-gray-50 to-gray-100 rounded-md border border-gray-200 flex items-center justify-center overflow-hidden ${
@@ -251,14 +225,15 @@ const ProductDetailPage: React.FC = () => {
                 }`}
                 onClick={() => {
                   if (allImages.length > 0) {
+                    setActiveImage(0);
                     setLightboxOpen(true);
                   }
                 }}
               >
                 {allImages.length > 0 ? (
                   <img
-                    src={allImages[activeImage]}
-                    alt="产品图"
+                    src={allImages[0]}
+                    alt="产品主图"
                     className="w-full h-full object-contain"
                   />
                 ) : (
@@ -266,67 +241,173 @@ const ProductDetailPage: React.FC = () => {
                 )}
               </div>
               {allImages.length > 1 && (
-                <div className="flex gap-2 mt-3 overflow-x-auto pb-1">
-                  {allImages.map((img: string, idx: number) => (
-                    <button
-                      key={idx}
-                      onClick={() => setActiveImage(idx)}
-                      className={`w-16 h-16 rounded border-2 flex-shrink-0 overflow-hidden bg-gray-50 transition-colors ${
-                        activeImage === idx
-                          ? 'border-blue-600 ring-2 ring-blue-600/20'
-                          : 'border-gray-200 hover:border-gray-400'
-                      }`}
-                    >
-                      <img
-                        src={img}
-                        alt={`缩略图${idx + 1}`}
-                        className="w-full h-full object-cover"
-                      />
-                    </button>
-                  ))}
-                </div>
-              )}
-              {allImages.length > 0 && (
                 <div className="text-xs text-gray-400 mt-2">
                   共 {allImages.length} 张图片（白底图 + 实拍图）
                 </div>
               )}
             </div>
 
-            <div className="flex flex-col justify-center space-y-4">
-              {product.referencePrice != null && product.referencePrice !== '' && (
-                <div>
-                  <div className="text-sm text-gray-500 mb-1">参考价格</div>
-                  <div className="text-3xl font-bold text-blue-600">
-                    ¥{Number(product.referencePrice).toLocaleString()}
-                  </div>
-                </div>
-              )}
-              {product.dailyPrice != null && product.dailyPrice !== '' && (
-                <div>
-                  <div className="text-sm text-gray-500 mb-1">日常价格</div>
-                  <div className="text-xl font-semibold text-gray-700">
-                    ¥{Number(product.dailyPrice).toLocaleString()}
-                  </div>
-                </div>
-              )}
-              {product.model && (
-                <div className="pt-2 border-t border-gray-100">
-                  <span className="text-sm text-gray-500">型号：</span>
-                  <span className="text-sm text-gray-800">{product.model}</span>
-                </div>
-              )}
+            {/* 标题 + 价格 + 基础信息 */}
+            <div className="flex flex-col">
+              <div className="flex items-center gap-2 mb-2 flex-wrap">
+                <Badge variant="black">{CATEGORY_LABELS[category]}</Badge>
+                {product.isOnSale ? (
+                  <Badge variant="success">在售</Badge>
+                ) : (
+                  <Badge variant="secondary">下架</Badge>
+                )}
+                {product.launchYear && (
+                  <Badge variant="outline">{product.launchYear}款</Badge>
+                )}
+              </div>
+              <h1 className="text-xl font-bold text-gray-900 mb-1">
+                {product.name || product.model || '产品名称'}
+              </h1>
               {product.brand && (
-                <div>
-                  <span className="text-sm text-gray-500">品牌：</span>
-                  <span className="text-sm text-gray-800">{product.brand}</span>
-                </div>
+                <p className="text-sm text-gray-500 mb-4">{product.brand}</p>
               )}
+
+              {/* 价格区 */}
+              <div className="bg-blue-50/50 border border-blue-100 rounded-md p-4 mb-4">
+                {product.referencePrice != null &&
+                  product.referencePrice !== '' && (
+                    <div className="mb-2">
+                      <div className="text-xs text-gray-500 mb-0.5">
+                        参考价格
+                      </div>
+                      <div className="text-2xl font-bold text-blue-600">
+                        ¥{Number(product.referencePrice).toLocaleString()}
+                      </div>
+                    </div>
+                  )}
+                {product.dailyPrice != null && product.dailyPrice !== '' && (
+                  <div>
+                    <div className="text-xs text-gray-500 mb-0.5">
+                      日常价格
+                    </div>
+                    <div className="text-lg font-semibold text-gray-700">
+                      ¥{Number(product.dailyPrice).toLocaleString()}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* 基础信息简表 */}
+              <div className="space-y-1.5">
+                <div className="flex text-sm">
+                  <span className="text-gray-500 w-20 flex-shrink-0">
+                    品牌
+                  </span>
+                  <span className="text-gray-800 font-medium">
+                    {product.brand || '-'}
+                  </span>
+                </div>
+                <div className="flex text-sm">
+                  <span className="text-gray-500 w-20 flex-shrink-0">
+                    型号
+                  </span>
+                  <span className="text-gray-800 font-medium">
+                    {product.model || '-'}
+                  </span>
+                </div>
+              </div>
             </div>
           </div>
         </div>
 
-        {/* Real videos */}
+        {/* 参数分组卡片 */}
+        {fieldGroups.length > 0 && (
+          <div className="bg-white rounded-md border border-gray-200 shadow-sm overflow-hidden">
+            <div className="px-6 py-4 border-b border-gray-100">
+              <h2 className="text-base font-semibold text-gray-900">
+                产品参数
+              </h2>
+            </div>
+            <div className="p-6 space-y-6">
+              {fieldGroups.map((group: FieldGroup) => (
+                <div
+                  key={group.key}
+                  className="bg-gray-50/50 rounded-md border border-gray-100 p-4"
+                >
+                  <div className="flex items-center gap-2 mb-3">
+                    <span className="w-6 h-6 rounded bg-blue-100 text-blue-600 flex items-center justify-center">
+                      {group.icon}
+                    </span>
+                    <h3 className="text-sm font-semibold text-gray-900">
+                      {group.label}
+                    </h3>
+                    <span className="text-xs text-gray-400 ml-auto">
+                      {group.fields.length} 项
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2">
+                    {group.fields.map((field: CategoryFieldConfig) => {
+                      const key = String(field.key);
+                      const value = product[key as keyof Product];
+                      const isPrice = PRICE_KEYS.has(key);
+
+                      return (
+                        <div
+                          key={key}
+                          className="flex items-baseline py-1.5 border-b border-gray-100 last:border-b-0"
+                        >
+                          <div className="text-xs text-gray-500 w-24 flex-shrink-0">
+                            {field.label}
+                          </div>
+                          <div
+                            className={cn(
+                              'text-sm font-medium min-w-0 flex-1',
+                              isPrice ? 'text-blue-600' : 'text-gray-800',
+                            )}
+                          >
+                            {renderFieldValue(field, value)}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* 实拍图缩略图区 */}
+        {realImages.length > 0 && (
+          <div className="bg-white rounded-md border border-gray-200 shadow-sm overflow-hidden">
+            <div className="px-6 py-4 border-b border-gray-100 flex items-center gap-2">
+              <ImageIcon className="w-4 h-4 text-gray-500" />
+              <h2 className="text-base font-semibold text-gray-900">
+                实拍图
+              </h2>
+              <span className="text-xs text-gray-400">
+                {realImages.length} 张
+              </span>
+            </div>
+            <div className="p-4">
+              <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
+                {realImages.map((img: string, idx: number) => (
+                  <button
+                    key={idx}
+                    onClick={() => openImageLightbox(idx)}
+                    className="aspect-square rounded-md border border-gray-200 overflow-hidden hover:border-blue-400 hover:shadow-md transition-all group"
+                  >
+                    <img
+                      src={img}
+                      alt={`实拍图 ${idx + 1}`}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+                    />
+                  </button>
+                ))}
+              </div>
+              <p className="text-xs text-gray-400 mt-3">
+                点击图片查看大图
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* 实拍视频缩略区 */}
         {realVideos.length > 0 && (
           <div className="bg-white rounded-md border border-gray-200 shadow-sm overflow-hidden">
             <div className="px-6 py-4 border-b border-gray-100 flex items-center gap-2">
@@ -338,99 +419,30 @@ const ProductDetailPage: React.FC = () => {
                 {realVideos.length} 个
               </span>
             </div>
-            <div className="p-6">
-              <div className="aspect-video bg-black rounded-md overflow-hidden">
-                <video
-                  key={realVideos[activeVideo]}
-                  src={realVideos[activeVideo]}
-                  controls
-                  playsInline
-                  className="w-full h-full object-contain"
-                />
+            <div className="p-4">
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                {realVideos.map((_url: string, idx: number) => (
+                  <button
+                    key={idx}
+                    onClick={() => {
+                      setActiveVideo(idx);
+                      setVideoDialogOpen(true);
+                    }}
+                    className="aspect-video rounded-md border border-gray-200 bg-gradient-to-br from-gray-800 to-gray-900 flex flex-col items-center justify-center text-white/80 hover:border-blue-400 hover:shadow-md transition-all group"
+                  >
+                    <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center mb-1 group-hover:bg-white/30 transition-colors">
+                      <Play className="w-5 h-5 ml-0.5" />
+                    </div>
+                    <span className="text-xs">视频 {idx + 1}</span>
+                  </button>
+                ))}
               </div>
-              {realVideos.length > 1 && (
-                <div className="flex gap-2 mt-3 overflow-x-auto pb-1">
-                  {realVideos.map((_url: string, idx: number) => (
-                    <button
-                      key={idx}
-                      onClick={() => {
-                        setActiveVideo(idx);
-                        setVideoDialogOpen(true);
-                      }}
-                      className={`w-20 h-14 rounded border-2 flex-shrink-0 overflow-hidden bg-gray-900 flex flex-col items-center justify-center text-white text-xs gap-0.5 transition-colors ${
-                        activeVideo === idx
-                          ? 'border-blue-600 ring-2 ring-blue-600/30'
-                          : 'border-gray-300 hover:border-gray-400'
-                      }`}
-                    >
-                      <Play className="w-4 h-4" />
-                      <span className="text-[10px]">视频 {idx + 1}</span>
-                    </button>
-                  ))}
-                </div>
-              )}
+              <p className="text-xs text-gray-400 mt-3">
+                点击视频卡片播放
+              </p>
             </div>
           </div>
         )}
-
-        {/* Parameters by groups */}
-        <div className="bg-white rounded-md border border-gray-200 shadow-sm overflow-hidden">
-          <div className="px-6 py-4 border-b border-gray-100 flex items-center gap-2">
-            <Settings className="w-4 h-4 text-gray-500" />
-            <h2 className="text-base font-semibold text-gray-900">
-              产品参数
-            </h2>
-            <span className="text-xs text-gray-400">
-              共 {fields.length} 项
-            </span>
-          </div>
-          <div className="p-6 space-y-6">
-            {fieldGroups.map((group: FieldGroup) => (
-              <div key={group.key}>
-                <div className="flex items-center gap-2 mb-3 pb-2 border-b border-gray-100">
-                  <span className="text-blue-600">{group.icon}</span>
-                  <h3 className="text-sm font-semibold text-gray-900">
-                    {group.label}
-                  </h3>
-                  <span className="text-xs text-gray-400">
-                    {group.fields.length} 项
-                  </span>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-0">
-                  {group.fields.map((field: CategoryFieldConfig) => {
-                    const key = String(field.key);
-                    const value = product[key as keyof Product];
-                    const isPrice = PRICE_KEYS.has(key);
-
-                    return (
-                      <div
-                        key={key}
-                        className="flex py-2 border-b border-gray-50 last:border-b-0 text-sm"
-                      >
-                        <div className="w-28 text-gray-500 flex-shrink-0">
-                          {field.label}
-                        </div>
-                        <div
-                          className={cn(
-                            'flex-1 min-w-0',
-                            isPrice ? 'font-semibold text-blue-600' : 'text-gray-800',
-                          )}
-                        >
-                          {renderFieldValue(field, value)}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            ))}
-            {fieldGroups.length === 0 && (
-              <div className="text-center py-8 text-gray-400 text-sm">
-                该类目暂无参数配置
-              </div>
-            )}
-          </div>
-        </div>
       </div>
 
       {/* Image lightbox */}
@@ -446,7 +458,7 @@ const ProductDetailPage: React.FC = () => {
             </DialogClose>
 
             <div className="flex items-center justify-center">
-              {allImages.length > 1 && (
+              {realImages.length > 1 && (
                 <button
                   onClick={handlePrevImage}
                   className="absolute left-2 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-black/50 hover:bg-black/70 text-white flex items-center justify-center transition-colors"
@@ -456,12 +468,12 @@ const ProductDetailPage: React.FC = () => {
               )}
 
               <img
-                src={allImages[activeImage]}
-                alt="产品大图"
+                src={realImages[activeImage]}
+                alt="实拍图大图"
                 className="w-full h-auto max-h-[80vh] object-contain"
               />
 
-              {allImages.length > 1 && (
+              {realImages.length > 1 && (
                 <button
                   onClick={handleNextImage}
                   className="absolute right-2 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-black/50 hover:bg-black/70 text-white flex items-center justify-center transition-colors"
@@ -471,35 +483,14 @@ const ProductDetailPage: React.FC = () => {
               )}
             </div>
 
-            {allImages.length > 1 && (
-              <div className="flex gap-2 mt-4 justify-center overflow-x-auto">
-                {allImages.map((img: string, idx: number) => (
-                  <button
-                    key={idx}
-                    onClick={() => setActiveImage(idx)}
-                    className={`w-14 h-14 rounded border-2 flex-shrink-0 overflow-hidden bg-gray-800 transition-colors ${
-                      activeImage === idx
-                        ? 'border-blue-600'
-                        : 'border-gray-600 hover:border-gray-400'
-                    }`}
-                  >
-                    <img
-                      src={img}
-                      alt={`缩略图${idx + 1}`}
-                      className="w-full h-full object-cover"
-                    />
-                  </button>
-                ))}
-              </div>
-            )}
             <div className="text-center text-white/60 text-xs mt-3">
-              {activeImage + 1} / {allImages.length}
+              {activeImage + 1} / {realImages.length}
             </div>
           </div>
         </DialogContent>
       </Dialog>
 
-      {/* Video dialog (fullscreen playback) */}
+      {/* Video dialog */}
       <Dialog open={videoDialogOpen} onOpenChange={setVideoDialogOpen}>
         <DialogContent
           className="max-w-4xl bg-black border-none shadow-none p-0"
@@ -526,9 +517,5 @@ const ProductDetailPage: React.FC = () => {
     </div>
   );
 };
-
-function cn(...classes: (string | false | undefined | null)[]): string {
-  return classes.filter(Boolean).join(' ');
-}
 
 export default ProductDetailPage;

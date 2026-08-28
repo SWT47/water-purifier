@@ -1,10 +1,10 @@
 import React from 'react';
 import {
-  Tag,
-  Image,
-  Video,
-  Settings,
+  Info,
   DollarSign,
+  Settings,
+  Droplets,
+  ShieldCheck,
 } from 'lucide-react';
 import type { Product, CategoryFieldConfig } from '@/types';
 import { PRICE_KEYS } from '@/utils/constants';
@@ -17,44 +17,52 @@ export interface FieldGroup {
   fields: CategoryFieldConfig[];
 }
 
+const CORE_PARAM_KEYS = new Set([
+  'flux',
+  'waterFlowRate',
+  'waterMode',
+  'faucet',
+  'dimensions',
+  'roMembraneBrand',
+  'heatingElement',
+  'heatingCapacity',
+  'tempControl',
+  'hasWaterTank',
+  'isAutomatic',
+]);
+
+const FILTER_COST_KEYS = new Set([
+  'filterTotalCost',
+  'activatedCarbon',
+]);
+
+const CERTIFICATION_KEYS = new Set([
+  'hasMaternityCert',
+  'hasZeroStagnantWater',
+]);
+
 export function groupFields(
   allFields: CategoryFieldConfig[],
   _product: Product,
 ): FieldGroup[] {
   const priceFields: CategoryFieldConfig[] = [];
   const coreFields: CategoryFieldConfig[] = [];
-  const imageFields: CategoryFieldConfig[] = [];
-  const videoFields: CategoryFieldConfig[] = [];
+  const filterFields: CategoryFieldConfig[] = [];
+  const certFields: CategoryFieldConfig[] = [];
   const otherFields: CategoryFieldConfig[] = [];
-
-  const coreKeys = new Set([
-    'flux',
-    'waterFlowRate',
-    'waterMode',
-    'faucet',
-    'dimensions',
-    'roMembraneBrand',
-    'filterTotalCost',
-    'activatedCarbon',
-    'heatingElement',
-    'heatingCapacity',
-    'tempControl',
-    'hasWaterTank',
-    'isAutomatic',
-    'hasMaternityCert',
-    'hasZeroStagnantWater',
-  ]);
 
   for (const f of allFields) {
     const key = String(f.key);
     if (PRICE_KEYS.has(key)) {
       priceFields.push(f);
-    } else if (f.type === 'images' || f.type === 'image') {
-      imageFields.push(f);
-    } else if (f.type === 'videos') {
-      videoFields.push(f);
-    } else if (coreKeys.has(key)) {
+    } else if (CORE_PARAM_KEYS.has(key)) {
       coreFields.push(f);
+    } else if (FILTER_COST_KEYS.has(key)) {
+      filterFields.push(f);
+    } else if (CERTIFICATION_KEYS.has(key)) {
+      certFields.push(f);
+    } else if (f.type === 'images' || f.type === 'videos' || f.type === 'image') {
+      // skip — handled by separate sections
     } else {
       otherFields.push(f);
     }
@@ -77,27 +85,27 @@ export function groupFields(
       fields: coreFields,
     });
   }
-  if (imageFields.length > 0) {
+  if (filterFields.length > 0) {
     groups.push({
-      key: 'image',
-      label: '图片资料',
-      icon: <Image className="w-4 h-4" />,
-      fields: imageFields,
+      key: 'filter',
+      label: '滤芯耗材',
+      icon: <Droplets className="w-4 h-4" />,
+      fields: filterFields,
     });
   }
-  if (videoFields.length > 0) {
+  if (certFields.length > 0) {
     groups.push({
-      key: 'video',
-      label: '视频资料',
-      icon: <Video className="w-4 h-4" />,
-      fields: videoFields,
+      key: 'cert',
+      label: '认证与功能',
+      icon: <ShieldCheck className="w-4 h-4" />,
+      fields: certFields,
     });
   }
   if (otherFields.length > 0) {
     groups.push({
       key: 'other',
       label: '其他属性',
-      icon: <Tag className="w-4 h-4" />,
+      icon: <Info className="w-4 h-4" />,
       fields: otherFields,
     });
   }
