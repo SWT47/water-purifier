@@ -205,39 +205,27 @@ const ComboRightPanel: React.FC<ComboRightPanelProps> = ({
                   <Save className="w-3.5 h-3.5 mr-1" />
                   保存方案
                 </Button>
-                {currentSchemeId ? (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="text-xs h-9 text-white/70 border-white/20 bg-transparent hover:bg-white/10 hover:text-white"
-                    disabled={selectedProducts.length === 0}
-                    onClick={onOverwrite}
-                  >
-                    <RotateCcw className="w-3.5 h-3.5 mr-1" />
-                    覆盖保存
-                  </Button>
-                ) : (
-                  <Button
-                    size="sm"
-                    variant="cyan"
-                    className="text-xs h-9"
-                    disabled={selectedProducts.length === 0}
-                    onClick={onLivePreview}
-                  >
-                    <Smartphone className="w-3.5 h-3.5 mr-1" />
-                    直播展示
-                  </Button>
-                )}
-              </div>
-              {currentSchemeId && (
                 <Button
+                  size="sm"
                   variant="cyan"
-                  className="w-full h-9 text-sm"
+                  className="text-xs h-9"
                   disabled={selectedProducts.length === 0}
                   onClick={onLivePreview}
                 >
-                  <Smartphone className="w-4 h-4 mr-2" />
-                  直播展示搭配方案
+                  <Smartphone className="w-3.5 h-3.5 mr-1" />
+                  直播展示
+                </Button>
+              </div>
+              {currentSchemeId && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full h-8 text-xs text-white/70 border-white/20 bg-transparent hover:bg-white/10 hover:text-white mt-1"
+                  disabled={selectedProducts.length === 0}
+                  onClick={onOverwrite}
+                >
+                  <RotateCcw className="w-3.5 h-3.5 mr-1" />
+                  覆盖当前方案
                 </Button>
               )}
             </div>
