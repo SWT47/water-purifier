@@ -343,7 +343,7 @@ const ProductCardView: React.FC<CardViewProps> = ({
                   </h3>
                   {product.referencePrice != null ? (
                     <div className="text-lg font-bold text-blue-600 mt-1">
-                      ¥{product.referencePrice.toLocaleString()}
+                      ¥{Number(product.referencePrice).toLocaleString()}
                     </div>
                   ) : (
                     <div className="text-sm text-gray-400 mt-1">价格待定</div>

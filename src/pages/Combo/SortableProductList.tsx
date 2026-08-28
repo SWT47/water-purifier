@@ -101,7 +101,7 @@ const SortableItem: React.FC<SortableItemProps> = ({ product, index, onRemove })
         </h4>
         {product.referencePrice != null && (
           <span className="text-sm font-bold text-blue-600">
-            ¥{product.referencePrice.toLocaleString()}
+            ¥{Number(product.referencePrice).toLocaleString()}
           </span>
         )}
       </div>

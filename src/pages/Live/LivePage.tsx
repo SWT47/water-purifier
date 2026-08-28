@@ -130,7 +130,15 @@ const LivePage: React.FC = () => {
 
   const livePrice: number | null = useMemo(() => {
     if (!currentProduct) return null;
-    return currentProduct.dailyPrice ?? currentProduct.referencePrice ?? null;
+    const dp =
+      currentProduct.dailyPrice != null
+        ? Number(currentProduct.dailyPrice)
+        : null;
+    const rp =
+      currentProduct.referencePrice != null
+        ? Number(currentProduct.referencePrice)
+        : null;
+    return dp ?? rp ?? null;
   }, [currentProduct]);
 
   if (loading) {
@@ -200,9 +208,9 @@ const LivePage: React.FC = () => {
             )}
             {currentProduct.referencePrice != null &&
               livePrice != null &&
-              currentProduct.referencePrice > livePrice && (
+              Number(currentProduct.referencePrice) > livePrice && (
                 <span className="text-sm text-white/40 line-through">
-                  ¥{currentProduct.referencePrice.toLocaleString()}
+                  ¥{Number(currentProduct.referencePrice).toLocaleString()}
                 </span>
               )}
           </div>

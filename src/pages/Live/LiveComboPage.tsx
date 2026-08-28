@@ -114,7 +114,8 @@ const LiveComboPage: React.FC = () => {
   const totalReference = useMemo(() => {
     if (!currentCombo) return 0;
     return currentCombo.products.reduce(
-      (sum: number, p: Product) => sum + (p.referencePrice ?? 0),
+      (sum: number, p: Product) =>
+        sum + (p.referencePrice != null ? Number(p.referencePrice) : 0),
       0,
     );
   }, [currentCombo]);
@@ -122,14 +123,16 @@ const LiveComboPage: React.FC = () => {
   const totalDaily = useMemo(() => {
     if (!currentCombo) return 0;
     return currentCombo.products.reduce(
-      (sum: number, p: Product) => sum + (p.dailyPrice ?? 0),
+      (sum: number, p: Product) =>
+        sum + (p.dailyPrice != null ? Number(p.dailyPrice) : 0),
       0,
     );
   }, [currentCombo]);
 
   const livePrice = useMemo(() => {
     if (!currentCombo) return null;
-    if (currentCombo.scheme.livePrice != null) return currentCombo.scheme.livePrice;
+    if (currentCombo.scheme.livePrice != null)
+      return Number(currentCombo.scheme.livePrice);
     if (totalDaily > 0) return totalDaily;
     return totalReference > 0 ? totalReference : null;
   }, [currentCombo, totalDaily, totalReference]);
@@ -242,7 +245,7 @@ const LiveComboPage: React.FC = () => {
                 )}
                 <div className="text-cyan-300 text-sm font-bold">
                   {p.referencePrice != null
-                    ? `¥${p.referencePrice.toLocaleString()}`
+                    ? `¥${Number(p.referencePrice).toLocaleString()}`
                     : '价格待定'}
                 </div>
               </div>

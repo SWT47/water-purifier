@@ -194,7 +194,7 @@ const ProductDetailPage: React.FC = () => {
                 <div className="mb-4">
                   <div className="text-sm text-gray-500 mb-1">参考价格</div>
                   <div className="text-3xl font-bold text-blue-600">
-                    ¥{product.referencePrice.toLocaleString()}
+                    ¥{Number(product.referencePrice).toLocaleString()}
                   </div>
                 </div>
               )}
@@ -202,7 +202,7 @@ const ProductDetailPage: React.FC = () => {
                 <div className="mb-4">
                   <div className="text-sm text-gray-500 mb-1">日常价格</div>
                   <div className="text-xl font-semibold text-gray-700">
-                    ¥{product.dailyPrice.toLocaleString()}
+                    ¥{Number(product.dailyPrice).toLocaleString()}
                   </div>
                 </div>
               )}

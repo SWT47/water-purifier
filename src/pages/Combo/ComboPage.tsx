@@ -95,7 +95,8 @@ const ComboPage: React.FC = () => {
   const totalReference = useMemo(
     () =>
       selectedProducts.reduce(
-        (sum: number, p: Product) => sum + (p.referencePrice ?? 0),
+        (sum: number, p: Product) =>
+          sum + (p.referencePrice != null ? Number(p.referencePrice) : 0),
         0,
       ),
     [selectedProducts],
@@ -103,7 +104,8 @@ const ComboPage: React.FC = () => {
   const totalDaily = useMemo(
     () =>
       selectedProducts.reduce(
-        (sum: number, p: Product) => sum + (p.dailyPrice ?? 0),
+        (sum: number, p: Product) =>
+          sum + (p.dailyPrice != null ? Number(p.dailyPrice) : 0),
         0,
       ),
     [selectedProducts],
@@ -348,7 +350,7 @@ const ComboPage: React.FC = () => {
                         </h3>
                         {p.referencePrice != null && (
                           <div className="text-sm font-bold text-blue-600 mt-auto">
-                            ¥{p.referencePrice.toLocaleString()}
+                            ¥{Number(p.referencePrice).toLocaleString()}
                           </div>
                         )}
                         <Button

@@ -200,7 +200,7 @@ const ComparePage: React.FC = () => {
                         </div>
                         {p.referencePrice != null && (
                           <div className="text-xs text-blue-300 mt-0.5">
-                            ¥{p.referencePrice.toLocaleString()}
+                            ¥{Number(p.referencePrice).toLocaleString()}
                           </div>
                         )}
                       </div>
