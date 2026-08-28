@@ -58,15 +58,15 @@ CREATE INDEX IF NOT EXISTS idx_combo_scheme_created_at ON combo_scheme (created_
 
 -- 示例产品（净水器 3 个 + 管线机 2 个 + 前置过滤器 2 个 + 大白瓶 1 个 + 中央净水机 1 个 = 9 个）
 INSERT INTO product (category, brand, name, model, white_bg_image, launch_year, is_on_sale, daily_price, reference_price, flux, water_flow_rate, faucet, dimensions, water_mode, ro_membrane_brand, filter_total_cost, activated_carbon, has_maternity_cert, has_zero_stagnant_water, real_images, real_videos) VALUES
-('water_purifier', '美的', '白泽净水器', 'MRO1782D-600G', '', '2024', true, 1299, 2999, '600G', '1.58L/min', '双出水龙头', '430x150x400mm', '直饮/生活双出水', '陶氏', 599, '椰壳活性炭', true, true, '{}', '{"https://www.w3schools.com/html/mov_bbb.mp4"}'),
-('water_purifier', '小米', '米家净水器 1000G', 'MR872-A', '', '2023', true, 899, 1999, '1000G', '2.4L/min', '单出水龙头', '420x140x400mm', '直饮', '海德能', 399, '颗粒活性炭', false, true, '{}', '{"https://www.w3schools.com/html/movie.mp4"}'),
-('water_purifier', '沁园', '小白鲸净水器', 'KRL5018', '', '2024', true, 1499, 3299, '800G', '2L/min', '双出水智能龙头', '450x160x420mm', '直饮/生活双出水', '东丽', 699, '烧结活性炭', true, false, '{}', '{}'),
-('pipeline_machine', '美的', '即热管线机', 'MG908-R', '', '2024', true, 599, 1299, NULL, NULL, NULL, '230x95x390mm', NULL, NULL, NULL, NULL, false, false, '{}', '{}'),
-('pipeline_machine', '小米', '即热饮水机', 'MJMY23YM', '', '2023', true, 399, 899, NULL, NULL, NULL, '210x85x350mm', NULL, NULL, NULL, NULL, false, false, '{}', '{}'),
-('pre_filter', '美的', '前置过滤器', 'QZBW20S-22', '', '2024', true, 399, 799, '5T/h', NULL, NULL, '180x80x250mm', NULL, NULL, NULL, NULL, false, false, '{}', '{}'),
-('pre_filter', '沁园', '前置过滤器', 'FMP292', '', '2023', true, 499, 899, '6T/h', NULL, NULL, '200x90x260mm', NULL, NULL, NULL, NULL, false, false, '{}', '{}'),
-('big_white_bottle', '滨特尔', '大白瓶前置过滤器', 'BF-10-B', '', '2024', true, 699, 1299, NULL, NULL, NULL, '300x120x450mm', NULL, NULL, NULL, NULL, false, false, '{}', '{}'),
-('central_purifier', '滨特尔', '中央净水机', 'CF-1054', '', '2024', true, 3999, 6999, '2T/h', NULL, NULL, '350x350x1200mm', NULL, NULL, NULL, NULL, false, false, '{}', '{}')
+('water_purifier', '美的', '白泽净水器', 'MRO1782D-600G', 'https://picsum.photos/seed/midea-white/600/600', '2024', true, 1299, 2999, '600G', '1.58L/min', '双出水龙头', '430x150x400mm', '直饮/生活双出水', '陶氏', 599, '椰壳活性炭', true, true, '{"https://picsum.photos/seed/midea-real1/800/600","https://picsum.photos/seed/midea-real2/800/600"}', '{"https://www.w3schools.com/html/mov_bbb.mp4"}'),
+('water_purifier', '小米', '米家净水器 1000G', 'MR872-A', 'https://picsum.photos/seed/xiaomi-white/600/600', '2023', true, 899, 1999, '1000G', '2.4L/min', '单出水龙头', '420x140x400mm', '直饮', '海德能', 399, '颗粒活性炭', false, true, '{"https://picsum.photos/seed/xiaomi-real1/800/600","https://picsum.photos/seed/xiaomi-real2/800/600"}', '{"https://www.w3schools.com/html/movie.mp4"}'),
+('water_purifier', '沁园', '小白鲸净水器', 'KRL5018', 'https://picsum.photos/seed/qinyuan-white/600/600', '2024', true, 1499, 3299, '800G', '2L/min', '双出水智能龙头', '450x160x420mm', '直饮/生活双出水', '东丽', 699, '烧结活性炭', true, false, '{"https://picsum.photos/seed/qinyuan-real1/800/600","https://picsum.photos/seed/qinyuan-real2/800/600"}', '{}'),
+('pipeline_machine', '美的', '即热管线机', 'MG908-R', 'https://picsum.photos/seed/midea-pipeline/600/600', '2024', true, 599, 1299, NULL, NULL, NULL, '230x95x390mm', NULL, NULL, NULL, NULL, false, false, '{"https://picsum.photos/seed/pipeline-real1/800/600"}', '{}'),
+('pipeline_machine', '小米', '即热饮水机', 'MJMY23YM', 'https://picsum.photos/seed/xiaomi-dispenser/600/600', '2023', true, 399, 899, NULL, NULL, NULL, '210x85x350mm', NULL, NULL, NULL, NULL, false, false, '{"https://picsum.photos/seed/dispenser-real1/800/600"}', '{}'),
+('pre_filter', '美的', '前置过滤器', 'QZBW20S-22', 'https://picsum.photos/seed/midea-prefilter/600/600', '2024', true, 399, 799, '5T/h', NULL, NULL, '180x80x250mm', NULL, NULL, NULL, NULL, false, false, '{"https://picsum.photos/seed/prefilter-real1/800/600"}', '{}'),
+('pre_filter', '沁园', '前置过滤器', 'FMP292', 'https://picsum.photos/seed/qinyuan-prefilter/600/600', '2023', true, 499, 899, '6T/h', NULL, NULL, '200x90x260mm', NULL, NULL, NULL, NULL, false, false, '{"https://picsum.photos/seed/qyprefilter-real1/800/600"}', '{}'),
+('big_white_bottle', '滨特尔', '大白瓶前置过滤器', 'BF-10-B', 'https://picsum.photos/seed/pentair-whitebottle/600/600', '2024', true, 699, 1299, NULL, NULL, NULL, '300x120x450mm', NULL, NULL, NULL, NULL, false, false, '{"https://picsum.photos/seed/whitebottle-real1/800/600"}', '{}'),
+('central_purifier', '滨特尔', '中央净水机', 'CF-1054', 'https://picsum.photos/seed/pentair-central/600/600', '2024', true, 3999, 6999, '2T/h', NULL, NULL, '350x350x1200mm', NULL, NULL, NULL, NULL, false, false, '{"https://picsum.photos/seed/central-real1/800/600"}', '{}')
 ON CONFLICT DO NOTHING;
 
 -- 示例搭配方案（2 个）

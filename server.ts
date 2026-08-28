@@ -30,9 +30,10 @@ app.all('/api/products/compare', (req: Request, res: Response) =>
 );
 
 // 产品详情 / 更新 / 删除
-app.all('/api/products/:id', (req: Request, res: Response) =>
-  productsByIdHandler(req as any, res as any),
-);
+app.all('/api/products/:id', (req: Request, res: Response) => {
+  (req as any).query.id = req.params.id;
+  return productsByIdHandler(req as any, res as any);
+});
 
 // 搭配方案列表 / 创建
 app.all('/api/combo-schemes', (req: Request, res: Response) =>
@@ -40,9 +41,10 @@ app.all('/api/combo-schemes', (req: Request, res: Response) =>
 );
 
 // 搭配方案更新 / 删除
-app.all('/api/combo-schemes/:id', (req: Request, res: Response) =>
-  comboSchemesByIdHandler(req as any, res as any),
-);
+app.all('/api/combo-schemes/:id', (req: Request, res: Response) => {
+  (req as any).query.id = req.params.id;
+  return comboSchemesByIdHandler(req as any, res as any);
+});
 
 // ---------------------------------------------------------------
 // /openapi/*  — 匿名读接口（只读，供公开访问用）
@@ -75,8 +77,10 @@ app.get(
 
 app.get(
   '/openapi/products/:id',
-  (req: Request, res: Response, next: NextFunction) =>
-    readOnly(req, res, next, productsByIdHandler),
+  (req: Request, res: Response, next: NextFunction) => {
+    (req as any).query.id = req.params.id;
+    return readOnly(req, res, next, productsByIdHandler);
+  },
 );
 
 app.get(
