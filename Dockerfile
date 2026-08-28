@@ -33,9 +33,10 @@ COPY --from=builder /app/dist ./dist
 
 # 从构建阶段复制打包后的服务端入口
 COPY --from=builder /app/server.js ./server.js
+RUN mv server.js server.cjs
 
 # 容器暴露端口
 EXPOSE 3000
 
 # 启动命令
-CMD ["node", "server.js"]
+CMD ["node", "server.cjs"]
