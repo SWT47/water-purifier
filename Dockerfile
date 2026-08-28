@@ -14,6 +14,8 @@ COPY . .
 
 # 构建前端产物 + 打包 server.ts 为 server.js
 RUN npm run build
+# 将 server.js 重命名为 server.cjs，确保在生产环境以 CommonJS 模式运行（避免 ESM import 问题）
+RUN mv server.js server.cjs
 
 # ============================================================
 # 阶段 2：运行
@@ -32,8 +34,7 @@ RUN npm install --omit=dev
 COPY --from=builder /app/dist ./dist
 
 # 从构建阶段复制打包后的服务端入口
-COPY --from=builder /app/server.js ./server.js
-RUN mv server.js server.cjs
+COPY --from=builder /app/server.cjs ./server.cjs
 
 # 容器暴露端口
 EXPOSE 3000

@@ -7,8 +7,8 @@
   "scripts": {
     "dev": "vercel dev",
     "build": "vite build && npm run server:build",
-    "server:build": "esbuild server.ts --bundle --platform=node --outfile=server.js --external:pg-native --alias:@shared=./shared",
-    "start": "node server.js",
+    "server:build": "esbuild server.ts --bundle --platform=node --outfile=server.cjs --external:pg-native --alias:@shared=./shared",
+    "start": "node server.cjs",
     "preview": "vite preview",
     "db:push": "drizzle-kit push",
     "db:generate": "drizzle-kit generate",

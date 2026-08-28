@@ -1,16 +1,28 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ChevronLeft, Edit, ArrowLeft } from 'lucide-react';
+import {
+  ChevronLeft,
+  ChevronRight,
+  Edit,
+  ArrowLeft,
+  Play,
+  X,
+} from 'lucide-react';
 import { toast } from 'sonner';
 import { getProduct } from '@/api/products';
 import type {
   Product,
   CategoryFieldConfig,
   ProductCategory,
-} from '@/utils/constants';
+} from '@/types';
 import { CATEGORY_FIELDS, CATEGORY_LABELS, PRICE_KEYS } from '@/utils/constants';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
+import {
+  Dialog,
+  DialogContent,
+  DialogClose,
+} from '@/components/ui/Dialog';
 
 const ProductDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -18,6 +30,8 @@ const ProductDetailPage: React.FC = () => {
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [activeImage, setActiveImage] = useState<number>(0);
+  const [activeVideo, setActiveVideo] = useState<number>(0);
+  const [lightboxOpen, setLightboxOpen] = useState<boolean>(false);
 
   useEffect(() => {
     if (!id) return;
@@ -68,6 +82,20 @@ const ProductDetailPage: React.FC = () => {
     product.whiteBgImage,
     ...(product.realImages || []),
   ].filter(Boolean) as string[];
+
+  const realVideos: string[] = product.realVideos || [];
+
+  const handlePrevImage = useCallback(() => {
+    setActiveImage((prev: number) =>
+      prev <= 0 ? allImages.length - 1 : prev - 1,
+    );
+  }, [allImages.length]);
+
+  const handleNextImage = useCallback(() => {
+    setActiveImage((prev: number) =>
+      prev >= allImages.length - 1 ? 0 : prev + 1,
+    );
+  }, [allImages.length]);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -120,7 +148,14 @@ const ProductDetailPage: React.FC = () => {
           {/* Image + price */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-6 border-b border-gray-100">
             <div className="flex flex-col">
-              <div className="aspect-square bg-gradient-to-b from-gray-50 to-gray-100 rounded-md border border-gray-200 flex items-center justify-center overflow-hidden">
+              <div
+                className={`aspect-square bg-gradient-to-b from-gray-50 to-gray-100 rounded-md border border-gray-200 flex items-center justify-center overflow-hidden ${
+                  allImages.length > 0 ? 'cursor-zoom-in' : ''
+                }`}
+                onClick={() => {
+                  if (allImages.length > 0) setLightboxOpen(true);
+                }}
+              >
                 {allImages.length > 0 ? (
                   <img
                     src={allImages[activeImage]}
@@ -180,6 +215,41 @@ const ProductDetailPage: React.FC = () => {
             </div>
           </div>
 
+          {/* Real videos */}
+          {realVideos.length > 0 && (
+            <div className="p-6 border-t border-gray-100">
+              <h2 className="text-base font-semibold text-gray-900 mb-4">
+                实拍视频
+              </h2>
+              <div className="aspect-video bg-black rounded-md overflow-hidden">
+                <video
+                  key={realVideos[activeVideo]}
+                  src={realVideos[activeVideo]}
+                  controls
+                  className="w-full h-full object-contain"
+                />
+              </div>
+              {realVideos.length > 1 && (
+                <div className="flex gap-2 mt-3 overflow-x-auto">
+                  {realVideos.map((_url: string, idx: number) => (
+                    <button
+                      key={idx}
+                      onClick={() => setActiveVideo(idx)}
+                      className={`w-20 h-14 rounded border-2 flex-shrink-0 overflow-hidden bg-black flex flex-col items-center justify-center text-white text-xs gap-0.5 ${
+                        activeVideo === idx
+                          ? 'border-blue-600 ring-2 ring-blue-600/30'
+                          : 'border-gray-200 hover:border-gray-400'
+                      }`}
+                    >
+                      <Play className="w-4 h-4" />
+                      <span className="text-[10px]">视频 {idx + 1}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Parameters table */}
           <div className="p-6">
             <h2 className="text-base font-semibold text-gray-900 mb-4">
@@ -229,6 +299,69 @@ const ProductDetailPage: React.FC = () => {
             </div>
           </div>
         </div>
+
+        {/* Image lightbox */}
+        <Dialog open={lightboxOpen} onOpenChange={setLightboxOpen}>
+          <DialogContent
+            className="max-w-5xl bg-transparent border-none shadow-none p-0"
+            showCloseButton={false}
+          >
+            <div className="relative w-full">
+              <DialogClose className="absolute right-0 -top-10 z-10 text-white/80 hover:text-white transition-colors">
+                <X className="w-6 h-6" />
+                <span className="sr-only">关闭</span>
+              </DialogClose>
+
+              <div className="flex items-center justify-center">
+                {allImages.length > 1 && (
+                  <button
+                    onClick={handlePrevImage}
+                    className="absolute left-2 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-black/50 hover:bg-black/70 text-white flex items-center justify-center transition-colors"
+                  >
+                    <ChevronLeft className="w-6 h-6" />
+                  </button>
+                )}
+
+                <img
+                  src={allImages[activeImage]}
+                  alt="产品大图"
+                  className="w-full h-auto max-h-[80vh] object-contain"
+                />
+
+                {allImages.length > 1 && (
+                  <button
+                    onClick={handleNextImage}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-black/50 hover:bg-black/70 text-white flex items-center justify-center transition-colors"
+                  >
+                    <ChevronRight className="w-6 h-6" />
+                  </button>
+                )}
+              </div>
+
+              {allImages.length > 1 && (
+                <div className="flex gap-2 mt-4 justify-center overflow-x-auto">
+                  {allImages.map((img: string, idx: number) => (
+                    <button
+                      key={idx}
+                      onClick={() => setActiveImage(idx)}
+                      className={`w-14 h-14 rounded border-2 flex-shrink-0 overflow-hidden bg-gray-800 ${
+                        activeImage === idx
+                          ? 'border-blue-600'
+                          : 'border-gray-600 hover:border-gray-400'
+                      }`}
+                    >
+                      <img
+                        src={img}
+                        alt={`缩略图${idx + 1}`}
+                        className="w-full h-full object-cover"
+                      />
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );

@@ -19,6 +19,7 @@ import type {
   ProductListResult,
 } from '@/utils/constants';
 import { CATEGORY_LABELS, ALL_CATEGORIES } from '@/utils/constants';
+import { Smartphone } from 'lucide-react';
 
 const ProductsPage: React.FC = () => {
   const { category: categoryParam } = useParams<{ category: string }>();
@@ -203,6 +204,13 @@ const ProductsPage: React.FC = () => {
         <span className="ml-2 text-xs text-white/60">
           · {categoryLabel}管理
         </span>
+        <button
+          onClick={() => navigate(`/live/${category}`)}
+          className="ml-auto bg-white/10 hover:bg-white/20 text-white text-xs px-3 py-1.5 rounded flex items-center gap-1.5 transition-colors"
+        >
+          <Smartphone className="w-3.5 h-3.5" />
+          直播模式
+        </button>
       </div>
 
       <div className="flex-1 flex overflow-hidden">

@@ -58,8 +58,8 @@ CREATE INDEX IF NOT EXISTS idx_combo_scheme_created_at ON combo_scheme (created_
 
 -- 示例产品（净水器 3 个 + 管线机 2 个 + 前置过滤器 2 个 + 大白瓶 1 个 + 中央净水机 1 个 = 9 个）
 INSERT INTO product (category, brand, name, model, white_bg_image, launch_year, is_on_sale, daily_price, reference_price, flux, water_flow_rate, faucet, dimensions, water_mode, ro_membrane_brand, filter_total_cost, activated_carbon, has_maternity_cert, has_zero_stagnant_water, real_images, real_videos) VALUES
-('water_purifier', '美的', '白泽净水器', 'MRO1782D-600G', '', '2024', true, 1299, 2999, '600G', '1.58L/min', '双出水龙头', '430x150x400mm', '直饮/生活双出水', '陶氏', 599, '椰壳活性炭', true, true, '{}', '{}'),
-('water_purifier', '小米', '米家净水器 1000G', 'MR872-A', '', '2023', true, 899, 1999, '1000G', '2.4L/min', '单出水龙头', '420x140x400mm', '直饮', '海德能', 399, '颗粒活性炭', false, true, '{}', '{}'),
+('water_purifier', '美的', '白泽净水器', 'MRO1782D-600G', '', '2024', true, 1299, 2999, '600G', '1.58L/min', '双出水龙头', '430x150x400mm', '直饮/生活双出水', '陶氏', 599, '椰壳活性炭', true, true, '{}', '{"https://www.w3schools.com/html/mov_bbb.mp4"}'),
+('water_purifier', '小米', '米家净水器 1000G', 'MR872-A', '', '2023', true, 899, 1999, '1000G', '2.4L/min', '单出水龙头', '420x140x400mm', '直饮', '海德能', 399, '颗粒活性炭', false, true, '{}', '{"https://www.w3schools.com/html/movie.mp4"}'),
 ('water_purifier', '沁园', '小白鲸净水器', 'KRL5018', '', '2024', true, 1499, 3299, '800G', '2L/min', '双出水智能龙头', '450x160x420mm', '直饮/生活双出水', '东丽', 699, '烧结活性炭', true, false, '{}', '{}'),
 ('pipeline_machine', '美的', '即热管线机', 'MG908-R', '', '2024', true, 599, 1299, NULL, NULL, NULL, '230x95x390mm', NULL, NULL, NULL, NULL, false, false, '{}', '{}'),
 ('pipeline_machine', '小米', '即热饮水机', 'MJMY23YM', '', '2023', true, 399, 899, NULL, NULL, NULL, '210x85x350mm', NULL, NULL, NULL, NULL, false, false, '{}', '{}'),

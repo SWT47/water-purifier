@@ -1,4 +1,5 @@
 import React from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Droplets,
   Thermometer,
@@ -6,6 +7,7 @@ import {
   Package,
   Droplet,
   Waves,
+  Layers,
 } from 'lucide-react';
 import {
   CATEGORY_LABELS,
@@ -40,6 +42,10 @@ const CategorySidebar: React.FC<CategorySidebarProps> = ({
   activeCategory,
   onCategoryChange,
 }) => {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const isComboActive = location.pathname === '/combo';
+
   return (
     <aside className="w-[220px] flex-shrink-0 bg-white border-r border-gray-200 py-4">
       <div className="px-4 pb-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">
@@ -72,6 +78,28 @@ const CategorySidebar: React.FC<CategorySidebarProps> = ({
           );
         })}
       </nav>
+
+      <div className="mt-4 pt-4 border-t border-gray-200 px-2">
+        <button
+          onClick={() => navigate('/combo')}
+          className={cn(
+            'w-full flex items-center gap-2.5 px-4 py-2.5 text-sm transition-colors text-left rounded-md',
+            isComboActive
+              ? 'bg-gray-100 text-black font-medium border-r-2 border-black'
+              : 'text-gray-700 hover:bg-gray-50',
+          )}
+        >
+          <span
+            className={cn(
+              'w-7 h-7 rounded-md flex items-center justify-center',
+              isComboActive ? 'bg-black text-white' : 'bg-gray-100 text-gray-600',
+            )}
+          >
+            <Layers className="w-4 h-4" />
+          </span>
+          <span>产品搭配</span>
+        </button>
+      </div>
     </aside>
   );
 };
