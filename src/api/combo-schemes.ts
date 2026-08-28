@@ -16,17 +16,17 @@ async function handleResponse<T>(response: Response): Promise<T> {
     throw new Error(message);
   }
   const contentType = response.headers.get('content-type');
-  if (contentType && contentType.includes('application/json')) {
-    const data = await response.json();
-    if (data && typeof data === 'object' && 'data' in data && 'success' in data) {
-      if (!data.success) {
-        throw new Error(data.message || '操作失败');
-      }
-      return data.data as T;
-    }
-    return data as T;
+  if (!contentType || !contentType.includes('application/json')) {
+    throw new Error(`非 JSON 响应 (${response.status})`);
   }
-  return undefined as unknown as T;
+  const data = await response.json();
+  if (data && typeof data === 'object' && 'data' in data && 'success' in data) {
+    if (!data.success) {
+      throw new Error(data.message || '操作失败');
+    }
+    return data.data as T;
+  }
+  return data as T;
 }
 
 export async function listComboSchemes(): Promise<ComboScheme[]> {

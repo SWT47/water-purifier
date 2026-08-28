@@ -11,23 +11,43 @@ import comboSchemesHandler from './api/combo-schemes';
 import comboSchemesByIdHandler from './api/combo-schemes/[id]';
 
 const app = express();
+
 app.use(express.json());
 
+// ---------------------------------------------------------------
+// /api/*  — 业务接口（与 Vercel Functions 对齐）
+// 注意：静态路由在前，动态 :id 路由在后
+// ---------------------------------------------------------------
+
+// 产品列表 / 创建
 app.all('/api/products', (req: Request, res: Response) =>
   productsHandler(req as any, res as any),
 );
+
+// 产品对比（静态路由，必须在 /:id 之前）
 app.all('/api/products/compare', (req: Request, res: Response) =>
   productsCompareHandler(req as any, res as any),
 );
+
+// 产品详情 / 更新 / 删除
 app.all('/api/products/:id', (req: Request, res: Response) =>
   productsByIdHandler(req as any, res as any),
 );
+
+// 搭配方案列表 / 创建
 app.all('/api/combo-schemes', (req: Request, res: Response) =>
   comboSchemesHandler(req as any, res as any),
 );
+
+// 搭配方案更新 / 删除
 app.all('/api/combo-schemes/:id', (req: Request, res: Response) =>
   comboSchemesByIdHandler(req as any, res as any),
 );
+
+// ---------------------------------------------------------------
+// /openapi/*  — 匿名读接口（只读，供公开访问用）
+// 写方法（POST/PUT/PATCH/DELETE）直接返回 405
+// ---------------------------------------------------------------
 
 function readOnly(
   req: Request,
@@ -46,28 +66,38 @@ function readOnly(
 app.get('/openapi/products', (req: Request, res: Response, next: NextFunction) =>
   readOnly(req, res, next, productsHandler),
 );
+
 app.get(
   '/openapi/products/compare',
   (req: Request, res: Response, next: NextFunction) =>
     readOnly(req, res, next, productsCompareHandler),
 );
+
 app.get(
   '/openapi/products/:id',
   (req: Request, res: Response, next: NextFunction) =>
     readOnly(req, res, next, productsByIdHandler),
 );
+
 app.get(
   '/openapi/combo-schemes',
   (req: Request, res: Response, next: NextFunction) =>
     readOnly(req, res, next, comboSchemesHandler),
 );
 
+// ---------------------------------------------------------------
+// 静态文件 + SPA fallback
+// ---------------------------------------------------------------
+
 app.use(express.static('dist'));
+
 app.get('*', (_req: Request, res: Response) => {
   res.sendFile(path.join(process.cwd(), 'dist', 'index.html'));
 });
 
 const port = process.env.PORT || 3000;
+
 app.listen(port, () => {
+  // eslint-disable-next-line no-console
   console.log(`Server running on port ${port}`);
 });

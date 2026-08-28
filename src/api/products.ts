@@ -26,18 +26,19 @@ async function handleResponse<T>(response: Response): Promise<T> {
     throw new Error(message);
   }
   const contentType = response.headers.get('content-type');
-  if (contentType && contentType.includes('application/json')) {
-    const data = await response.json();
-    // Support both { success, data } wrapper and direct data
-    if (data && typeof data === 'object' && 'data' in data && 'success' in data) {
-      if (!data.success) {
-        throw new Error(data.message || '操作失败');
-      }
-      return data.data as T;
-    }
-    return data as T;
+  if (!contentType || !contentType.includes('application/json')) {
+    // 非 JSON 响应（如被重定向到登录页返回 HTML），视为失败触发 fallback
+    throw new Error(`非 JSON 响应 (${response.status})`);
   }
-  return undefined as unknown as T;
+  const data = await response.json();
+  // Support both { success, data } wrapper and direct data
+  if (data && typeof data === 'object' && 'data' in data && 'success' in data) {
+    if (!data.success) {
+      throw new Error(data.message || '操作失败');
+    }
+    return data.data as T;
+  }
+  return data as T;
 }
 
 function buildQueryString(params: Record<string, unknown>): string {
