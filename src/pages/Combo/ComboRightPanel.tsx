@@ -1,7 +1,6 @@
 import React from 'react';
-import { Save, RotateCcw, Smartphone, Trash2, FolderOpen } from 'lucide-react';
+import { Save, RotateCcw, Smartphone, FolderOpen } from 'lucide-react';
 import type { Product, ComboScheme } from '@/types';
-import { formatPrice } from '@/utils/format';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/Label';
@@ -74,19 +73,32 @@ const ComboRightPanel: React.FC<ComboRightPanelProps> = ({
   onSchemeDialogChange,
   onSaveDialogChange,
 }) => {
+  const dailyDisplay = hasDaily
+    ? `¥${totalDaily.toLocaleString()}`
+    : '—';
+
+  const referenceDisplay = hasReference
+    ? `¥${totalReference.toLocaleString()}`
+    : '—';
+
+  const savedAmount =
+    livePriceNum != null && totalReference > 0 && totalReference > livePriceNum
+      ? totalReference - livePriceNum
+      : 0;
+
   return (
     <>
-      <aside className="w-[360px] flex-shrink-0 bg-white border-l border-gray-200 flex flex-col">
-        <div className="px-5 py-4 border-b border-gray-200">
+      <aside className="w-[380px] flex-shrink-0 bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 flex flex-col text-white">
+        <div className="px-5 py-4 border-b border-white/10">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-base font-semibold text-gray-900">
-                搭配方案
+              <h2 className="text-base font-semibold text-white">
+                直播搭配方案
               </h2>
-              <p className="text-xs text-gray-500 mt-0.5">
+              <p className="text-xs text-white/50 mt-0.5">
                 已选 {selectedProducts.length}/{MAX_ITEMS} 款
                 {currentSchemeId && (
-                  <span className="ml-2 text-cyan-600">· {schemeName}</span>
+                  <span className="ml-2 text-cyan-400">· {schemeName}</span>
                 )}
               </p>
             </div>
@@ -94,7 +106,7 @@ const ComboRightPanel: React.FC<ComboRightPanelProps> = ({
               <Button
                 variant="outline"
                 size="sm"
-                className="text-xs h-8 text-gray-600"
+                className="text-xs h-8 text-white/70 border-white/20 bg-transparent hover:bg-white/10 hover:text-white"
                 disabled={selectedProducts.length === 0}
                 onClick={onClear}
               >
@@ -104,7 +116,7 @@ const ComboRightPanel: React.FC<ComboRightPanelProps> = ({
               <Button
                 variant="outline"
                 size="sm"
-                className="text-xs h-8 text-gray-600"
+                className="text-xs h-8 text-white/70 border-white/20 bg-transparent hover:bg-white/10 hover:text-white"
                 onClick={onOpenSchemes}
               >
                 <FolderOpen className="w-3.5 h-3.5 mr-1" />
@@ -114,73 +126,79 @@ const ComboRightPanel: React.FC<ComboRightPanelProps> = ({
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-3">{children}</div>
+        <div className="flex-1 overflow-y-auto p-3 space-y-2">{children}</div>
 
-        <div className="border-t border-gray-200 p-4 bg-white">
+        <div className="border-t border-white/10 p-4 bg-slate-900/60">
           {selectedProducts.length > 0 ? (
             <div className="space-y-3">
               <div className="space-y-1">
-                <Label className="text-xs text-gray-500">方案名称</Label>
+                <Label className="text-xs text-white/50">方案名称</Label>
                 <Input
                   value={schemeName}
                   onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                     onSchemeNameChange(e.target.value)
                   }
                   placeholder="输入方案名称"
-                  className="h-8 text-sm"
-                />
-              </div>
-              <div className="space-y-1">
-                <Label className="text-xs text-gray-500">直播价 (可选)</Label>
-                <Input
-                  type="number"
-                  value={livePrice}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                    onLivePriceChange(e.target.value)
-                  }
-                  placeholder="设置直播价"
-                  className="h-8 text-sm"
+                  className="h-8 text-sm bg-white/5 border-white/15 text-white placeholder:text-white/30 focus-visible:ring-cyan-400/50"
                 />
               </div>
 
               {hasDaily && (
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-gray-500">日常总价</span>
-                  <span className="font-medium text-gray-700">
-                    {formatPrice(totalDaily)}
+                  <span className="text-white/50">日常总价</span>
+                  <span className="font-medium text-white/80">
+                    {dailyDisplay}
                   </span>
                 </div>
               )}
               {hasReference && (
                 <div className="flex items-center justify-between">
-                  <span className="text-gray-600 text-sm">参考总价</span>
-                  <span className="text-2xl font-bold text-blue-600">
-                    {formatPrice(totalReference)}
+                  <span className="text-white/70 text-sm">参考总价</span>
+                  <span className="text-xl font-bold text-white">
+                    {referenceDisplay}
                   </span>
                 </div>
               )}
-              {showDiff && (
-                <div className="flex items-center justify-between text-xs bg-red-50 px-3 py-1.5 rounded">
-                  <span className="text-red-600">优惠差额</span>
-                  <span className="font-semibold text-red-600">
-                    省 ¥{diff.toLocaleString()}
+
+              <div className="space-y-1.5 pt-1 border-t border-white/10">
+                <Label className="text-xs text-white/50">直播优惠价</Label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-red-400 font-bold text-lg pointer-events-none">
+                    ¥
                   </span>
+                  <Input
+                    type="number"
+                    value={livePrice}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                      onLivePriceChange(e.target.value)
+                    }
+                    placeholder="请输入直播优惠价"
+                    className="h-10 text-base font-bold text-red-400 bg-white/5 border-white/15 pl-8 placeholder:text-white/30 focus-visible:ring-red-400/50 focus-visible:border-red-400/50"
+                  />
                 </div>
-              )}
-              {livePriceNum !== null && (
-                <div className="flex items-center justify-between pt-1 border-t border-gray-100">
-                  <span className="text-sm text-gray-600">直播价</span>
-                  <span className="text-xl font-bold text-red-600">
-                    ¥{livePriceNum.toLocaleString()}
-                  </span>
-                </div>
-              )}
+                {savedAmount > 0 && (
+                  <div className="flex items-center justify-between text-xs bg-red-500/15 px-3 py-1.5 rounded">
+                    <span className="text-red-400">立省</span>
+                    <span className="font-semibold text-red-400">
+                      ¥{savedAmount.toLocaleString()}
+                    </span>
+                  </div>
+                )}
+                {showDiff && livePriceNum == null && (
+                  <div className="flex items-center justify-between text-xs bg-cyan-500/15 px-3 py-1.5 rounded">
+                    <span className="text-cyan-400">日常vs参考 差额</span>
+                    <span className="font-semibold text-cyan-400">
+                      ¥{diff.toLocaleString()}
+                    </span>
+                  </div>
+                )}
+              </div>
 
               <div className="grid grid-cols-2 gap-2 pt-1">
                 <Button
                   variant="outline"
                   size="sm"
-                  className="text-xs h-9"
+                  className="text-xs h-9 text-white/70 border-white/20 bg-transparent hover:bg-white/10 hover:text-white"
                   disabled={selectedProducts.length === 0}
                   onClick={onSaveAs}
                 >
@@ -191,7 +209,7 @@ const ComboRightPanel: React.FC<ComboRightPanelProps> = ({
                   <Button
                     variant="outline"
                     size="sm"
-                    className="text-xs h-9"
+                    className="text-xs h-9 text-white/70 border-white/20 bg-transparent hover:bg-white/10 hover:text-white"
                     disabled={selectedProducts.length === 0}
                     onClick={onOverwrite}
                   >
@@ -224,14 +242,13 @@ const ComboRightPanel: React.FC<ComboRightPanelProps> = ({
               )}
             </div>
           ) : (
-            <div className="text-center text-gray-400 text-sm py-2">
+            <div className="text-center text-white/40 text-sm py-2">
               选择产品后显示总价
             </div>
           )}
         </div>
       </aside>
 
-      {/* Save dialog */}
       <Dialog open={saveDialogOpen} onOpenChange={onSaveDialogChange}>
         <DialogContent className="max-w-md">
           <DialogHeader>
@@ -259,7 +276,6 @@ const ComboRightPanel: React.FC<ComboRightPanelProps> = ({
         </DialogContent>
       </Dialog>
 
-      {/* Scheme list dialog */}
       <Dialog open={schemeDialogOpen} onOpenChange={onSchemeDialogChange}>
         <DialogContent className="max-w-md">
           <DialogHeader>
@@ -282,7 +298,8 @@ const ComboRightPanel: React.FC<ComboRightPanelProps> = ({
                     </div>
                     <div className="text-xs text-gray-500 mt-0.5">
                       {s.productIds?.length || 0} 款产品
-                      {s.livePrice != null && ` · 直播价 ¥${s.livePrice}`}
+                      {s.livePrice != null &&
+                        ` · 直播价 ¥${Number(s.livePrice).toLocaleString()}`}
                     </div>
                   </div>
                   <div className="flex items-center gap-1 ml-2">
@@ -299,18 +316,21 @@ const ComboRightPanel: React.FC<ComboRightPanelProps> = ({
                       onClick={() => onDeleteScheme(s.id)}
                       title="删除方案"
                     >
-                      <Trash2 className="w-4 h-4" />
+                      <svg
+                        className="w-4 h-4"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                      >
+                        <path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6h14z" />
+                      </svg>
                     </button>
                   </div>
                 </div>
               ))
             )}
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => onSchemeDialogChange(false)}>
-              关闭
-            </Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
     </>

@@ -12,8 +12,8 @@ const App: React.FC = () => {
   return (
     <Routes>
       <Route path="/" element={<Navigate to="/products/water_purifier" replace />} />
-      <Route path="/products/:category" element={<ProductsPage />} />
       <Route path="/products/detail/:id" element={<ProductDetailPage />} />
+      <Route path="/products/:category" element={<ProductsPage />} />
       <Route path="/compare" element={<ComparePage />} />
       <Route path="/combo" element={<ComboPage />} />
       <Route path="/live/:category" element={<LivePage />} />

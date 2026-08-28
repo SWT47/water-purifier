@@ -21,7 +21,7 @@ const SortableProductList: React.FC<SortableProductListProps> = ({
 }) => {
   if (products.length === 0) {
     return (
-      <div className="h-full flex flex-col items-center justify-center text-gray-400 py-20">
+      <div className="h-full flex flex-col items-center justify-center text-white/30 py-20">
         <span className="text-sm">还没有选择产品</span>
         <p className="text-xs mt-1">从左侧点击「加入搭配」开始</p>
       </div>
@@ -51,7 +51,11 @@ interface SortableItemProps {
   onRemove: (id: string) => void;
 }
 
-const SortableItem: React.FC<SortableItemProps> = ({ product, index, onRemove }) => {
+const SortableItem: React.FC<SortableItemProps> = ({
+  product,
+  index,
+  onRemove,
+}) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: product.id });
 
@@ -66,17 +70,17 @@ const SortableItem: React.FC<SortableItemProps> = ({ product, index, onRemove })
     <div
       ref={setNodeRef}
       style={style}
-      className="flex gap-3 p-2.5 mb-2 rounded-md bg-gray-50 hover:bg-gray-100 border border-gray-100 transition-colors"
+      className="flex gap-3 p-2.5 mb-2 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 transition-colors backdrop-blur-sm"
     >
       <div
         {...attributes}
         {...listeners}
-        className="flex items-center text-gray-400 cursor-grab active:cursor-grabbing pt-1"
+        className="flex items-center text-white/30 cursor-grab active:cursor-grabbing pt-1"
       >
         <GripVertical className="w-4 h-4" />
       </div>
-      <div className="relative w-16 h-16 flex-shrink-0 rounded-md overflow-hidden bg-gradient-to-b from-gray-50 to-gray-100 flex items-center justify-center">
-        <div className="absolute top-0 left-0 bg-cyan-500 text-white text-[10px] w-4 h-4 flex items-center justify-center font-bold rounded-bl-md">
+      <div className="relative w-14 h-14 flex-shrink-0 rounded-md overflow-hidden bg-white/5 flex items-center justify-center">
+        <div className="absolute top-0 left-0 z-10 bg-gradient-to-br from-cyan-400 to-blue-500 text-white text-[11px] w-5 h-5 flex items-center justify-center font-bold rounded-br-md">
           {index + 1}
         </div>
         {product.whiteBgImage ? (
@@ -86,27 +90,27 @@ const SortableItem: React.FC<SortableItemProps> = ({ product, index, onRemove })
             className="w-full h-full object-contain p-1"
           />
         ) : (
-          <div className="text-[10px] text-gray-400">无图</div>
+          <div className="text-[10px] text-white/30">无图</div>
         )}
       </div>
-      <div className="flex-1 min-w-0 flex flex-col gap-1">
-        <span className="text-[10px] text-cyan-600 font-medium">
+      <div className="flex-1 min-w-0 flex flex-col gap-0.5">
+        <span className="text-[10px] text-cyan-400 font-medium">
           {CATEGORY_LABELS[product.category as ProductCategory]}
         </span>
-        <span className="text-xs text-gray-500 truncate">
+        <span className="text-[11px] text-white/50 truncate">
           {product.brand || '未知品牌'}
         </span>
-        <h4 className="text-sm font-semibold text-gray-900 leading-tight truncate">
+        <h4 className="text-sm font-semibold text-white leading-tight truncate">
           {productTitle(product)}
         </h4>
         {product.referencePrice != null && (
-          <span className="text-sm font-bold text-blue-600">
+          <span className="text-sm font-bold text-cyan-400 mt-0.5">
             ¥{Number(product.referencePrice).toLocaleString()}
           </span>
         )}
       </div>
       <button
-        className="self-start p-1 text-gray-400 hover:text-red-500 transition-colors"
+        className="self-start p-1 text-white/30 hover:text-red-400 transition-colors"
         onClick={() => onRemove(product.id)}
         title="移除"
       >
