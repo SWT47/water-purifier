@@ -1,8 +1,8 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { z } from 'zod';
-import { db } from '../db';
-import { product } from '../db/schema';
-import type { Product } from '@shared/api.interface';
+import { db } from '../../db';
+import { product } from '../../db/schema';
+import type { Product } from '../../shared/api.interface;
 import { inArray, desc } from 'drizzle-orm';
 
 const compareBodySchema = z.object({
