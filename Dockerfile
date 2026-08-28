@@ -12,10 +12,8 @@ RUN npm install
 # 复制所有源码
 COPY . .
 
-# 构建前端产物 + 打包 server.ts 为 server.js
+# 构建前端产物 + 打包 server.ts 为 server.cjs
 RUN npm run build
-# 将 server.js 重命名为 server.cjs，确保在生产环境以 CommonJS 模式运行（避免 ESM import 问题）
-RUN mv server.js server.cjs
 
 # ============================================================
 # 阶段 2：运行
