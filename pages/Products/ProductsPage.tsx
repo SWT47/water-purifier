@@ -54,7 +54,6 @@ const ProductsPage: React.FC = () => {
     brand: '',
     minPrice: '',
     maxPrice: '',
-    isOnSale: '',
   });
 
   // 选中行
@@ -94,9 +93,6 @@ const ProductsPage: React.FC = () => {
       };
       if (filters.keyword) params.keyword = filters.keyword;
       if (filters.brand) params.brand = filters.brand;
-      if (filters.isOnSale !== '') {
-        params.isOnSale = filters.isOnSale === 'true';
-      }
       // 价格范围在前端过滤，后端不支持，先传基础参数
       const resp = await getProductList(params);
       if (resp.success) {

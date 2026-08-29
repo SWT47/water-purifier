@@ -27,7 +27,6 @@ export interface FilterValues {
   brand: string;
   minPrice: string;
   maxPrice: string;
-  isOnSale: '' | 'true' | 'false';
 }
 
 export type ViewMode = 'table' | 'card';
@@ -59,7 +58,6 @@ const FilterBar: React.FC<FilterBarProps> = ({
   const [brand, setBrand] = useState('');
   const [minPrice, setMinPrice] = useState('');
   const [maxPrice, setMaxPrice] = useState('');
-  const [isOnSale, setIsOnSale] = useState<'' | 'true' | 'false'>('');
 
   // debounce keyword
   const timerRef = useRef<number | null>(null);
@@ -67,13 +65,13 @@ const FilterBar: React.FC<FilterBarProps> = ({
   useEffect(() => {
     if (timerRef.current) window.clearTimeout(timerRef.current);
     timerRef.current = window.setTimeout(() => {
-      onFilterChange({ keyword, brand, minPrice, maxPrice, isOnSale });
+      onFilterChange({ keyword, brand, minPrice, maxPrice });
     }, 300);
     return () => {
       if (timerRef.current) window.clearTimeout(timerRef.current);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [keyword, brand, minPrice, maxPrice, isOnSale]);
+  }, [keyword, brand, minPrice, maxPrice]);
 
   const categoryLabel = CATEGORY_LABELS[category] || '产品';
 
@@ -82,11 +80,9 @@ const FilterBar: React.FC<FilterBarProps> = ({
     setBrand('');
     setMinPrice('');
     setMaxPrice('');
-    setIsOnSale('');
   };
 
-  const hasFilters =
-    keyword || brand || minPrice || maxPrice || isOnSale !== '';
+  const hasFilters = keyword || brand || minPrice || maxPrice;
 
   return (
     <div className="flex flex-col gap-3 px-6 py-4 bg-white border-b border-gray-200">
@@ -203,24 +199,6 @@ const FilterBar: React.FC<FilterBarProps> = ({
             placeholder="最高价"
             className="w-24 h-9"
           />
-        </div>
-
-        <div className="min-w-[120px]">
-          <Select
-            value={isOnSale}
-            onValueChange={(v: string) =>
-              setIsOnSale(v as '' | 'true' | 'false')
-            }
-          >
-            <SelectTrigger className="w-full h-9">
-              <SelectValue placeholder="是否在售" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="">全部</SelectItem>
-              <SelectItem value="true">在售</SelectItem>
-              <SelectItem value="false">下架</SelectItem>
-            </SelectContent>
-          </Select>
         </div>
 
         {hasFilters && (
