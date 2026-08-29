@@ -5,7 +5,6 @@ import {
   Settings,
   Droplets,
   ShieldCheck,
-  Sparkles,
 } from 'lucide-react';
 import type { Product, CategoryFieldConfig } from '@/types';
 import { PRICE_KEYS } from '@/utils/constants';
@@ -23,10 +22,13 @@ const CORE_PARAM_KEYS = new Set([
   'waterFlowRate',
   'waterMode',
   'faucet',
+  'dimensions',
   'roMembraneBrand',
   'heatingElement',
   'heatingCapacity',
   'tempControl',
+  'hasWaterTank',
+  'isAutomatic',
 ]);
 
 const FILTER_COST_KEYS = new Set([
@@ -37,24 +39,12 @@ const FILTER_COST_KEYS = new Set([
 const CERTIFICATION_KEYS = new Set([
   'hasMaternityCert',
   'hasZeroStagnantWater',
-  'hasWaterTank',
-  'isAutomatic',
-]);
-
-const BASE_INFO_KEYS = new Set([
-  'brand',
-  'name',
-  'model',
-  'launchYear',
-  'isOnSale',
-  'dimensions',
 ]);
 
 export function groupFields(
   allFields: CategoryFieldConfig[],
   _product: Product,
 ): FieldGroup[] {
-  const baseFields: CategoryFieldConfig[] = [];
   const priceFields: CategoryFieldConfig[] = [];
   const coreFields: CategoryFieldConfig[] = [];
   const filterFields: CategoryFieldConfig[] = [];
@@ -63,12 +53,7 @@ export function groupFields(
 
   for (const f of allFields) {
     const key = String(f.key);
-    if (f.type === 'images' || f.type === 'videos' || f.type === 'image') {
-      continue;
-    }
-    if (BASE_INFO_KEYS.has(key)) {
-      baseFields.push(f);
-    } else if (PRICE_KEYS.has(key)) {
+    if (PRICE_KEYS.has(key)) {
       priceFields.push(f);
     } else if (CORE_PARAM_KEYS.has(key)) {
       coreFields.push(f);
@@ -76,20 +61,14 @@ export function groupFields(
       filterFields.push(f);
     } else if (CERTIFICATION_KEYS.has(key)) {
       certFields.push(f);
+    } else if (f.type === 'images' || f.type === 'videos' || f.type === 'image') {
+      // skip — handled by separate sections
     } else {
       otherFields.push(f);
     }
   }
 
   const groups: FieldGroup[] = [];
-  if (baseFields.length > 0) {
-    groups.push({
-      key: 'base',
-      label: '基础信息',
-      icon: <Info className="w-4 h-4" />,
-      fields: baseFields,
-    });
-  }
   if (priceFields.length > 0) {
     groups.push({
       key: 'price',
@@ -126,38 +105,16 @@ export function groupFields(
     groups.push({
       key: 'other',
       label: '其他属性',
-      icon: <Sparkles className="w-4 h-4" />,
+      icon: <Info className="w-4 h-4" />,
       fields: otherFields,
     });
   }
   return groups;
 }
 
-const HIGHLIGHT_KEYS = new Set([
-  'referencePrice',
-  'dailyPrice',
-  'flux',
-  'waterFlowRate',
-  'filterTotalCost',
-]);
-
-const ACCENT_KEYS = new Set([
-  'heatingCapacity',
-  'roMembraneBrand',
-]);
-
-export function isHighlightField(field: CategoryFieldConfig): boolean {
-  return HIGHLIGHT_KEYS.has(String(field.key));
-}
-
-export function isAccentField(field: CategoryFieldConfig): boolean {
-  return ACCENT_KEYS.has(String(field.key));
-}
-
 export function renderFieldValue(
   field: CategoryFieldConfig,
   value: unknown,
-  large: boolean = false,
 ): React.ReactNode {
   const isPrice = PRICE_KEYS.has(String(field.key));
 
@@ -172,19 +129,9 @@ export function renderFieldValue(
 
   if (field.type === 'boolean') {
     return value ? (
-      <Badge
-        variant="success"
-        className={large ? 'text-xs px-2.5 py-1' : 'text-[11px] px-2 py-0.5'}
-      >
-        是
-      </Badge>
+      <Badge variant="success">是</Badge>
     ) : (
-      <Badge
-        variant="secondary"
-        className={large ? 'text-xs px-2.5 py-1' : 'text-[11px] px-2 py-0.5'}
-      >
-        否
-      </Badge>
+      <Badge variant="secondary">否</Badge>
     );
   }
 

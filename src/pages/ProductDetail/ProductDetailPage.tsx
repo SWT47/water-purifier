@@ -33,7 +33,7 @@ import {
   DialogContent,
   DialogClose,
 } from '@/components/ui/Dialog';
-import { groupFields, type FieldGroup, renderFieldValue, cn, isHighlightField, isAccentField } from './detail-helpers';
+import { groupFields, type FieldGroup, renderFieldValue, cn } from './detail-helpers';
 
 const ProductDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -315,88 +315,59 @@ const ProductDetailPage: React.FC = () => {
           </div>
         </div>
 
-        {/* 参数分组卡片 - 全方框卡片样式 */}
+        {/* 参数分组卡片 */}
         {fieldGroups.length > 0 && (
           <div className="bg-white rounded-md border border-gray-200 shadow-sm overflow-hidden">
-            <div className="px-6 py-4 border-b border-gray-100 bg-gradient-to-r from-gray-50 to-white">
-              <h2 className="text-base font-bold text-gray-900">
+            <div className="px-6 py-4 border-b border-gray-100">
+              <h2 className="text-base font-semibold text-gray-900">
                 产品参数
               </h2>
-              <p className="text-xs text-gray-500 mt-0.5">
-                按类别分组展示，所有参数均以卡片方框呈现
-              </p>
             </div>
-            <div className="p-5 space-y-5">
-              {fieldGroups.map((group: FieldGroup) => {
-                return (
-                  <div key={group.key} className="rounded-lg overflow-hidden border border-gray-100 bg-white">
-                    {/* 分组标题栏 */}
-                    <div className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-gray-50 to-gray-100/50 border-b border-gray-100">
-                      <div className="w-0.5 h-4 bg-black rounded-full" />
-                      <span className="w-5 h-5 rounded bg-white text-gray-700 flex items-center justify-center shadow-sm">
-                        {group.icon}
-                      </span>
-                      <h3 className="text-sm font-bold text-gray-900">
-                        {group.label}
-                      </h3>
-                      <span className="ml-auto text-[11px] text-gray-400 bg-white px-2 py-0.5 rounded-full border border-gray-200">
-                        {group.fields.length} 项
-                      </span>
-                    </div>
+            <div className="p-6 space-y-6">
+              {fieldGroups.map((group: FieldGroup) => (
+                <div
+                  key={group.key}
+                  className="bg-gray-50/50 rounded-md border border-gray-100 p-4"
+                >
+                  <div className="flex items-center gap-2 mb-3">
+                    <span className="w-6 h-6 rounded bg-blue-100 text-blue-600 flex items-center justify-center">
+                      {group.icon}
+                    </span>
+                    <h3 className="text-sm font-semibold text-gray-900">
+                      {group.label}
+                    </h3>
+                    <span className="text-xs text-gray-400 ml-auto">
+                      {group.fields.length} 项
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2">
+                    {group.fields.map((field: CategoryFieldConfig) => {
+                      const key = String(field.key);
+                      const value = product[key as keyof Product];
+                      const isPrice = PRICE_KEYS.has(key);
 
-                    {/* 全部参数卡片网格 - 每个参数一个方框 */}
-                    <div className="p-4 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-                      {group.fields.map((field: CategoryFieldConfig) => {
-                        const key = String(field.key);
-                        const value = product[key as keyof Product];
-                        const isPrice = PRICE_KEYS.has(key);
-                        const isHighlight = isHighlightField(field);
-                        const isAccent = isAccentField(field);
-
-                        let cardClass = 'bg-gray-50/50 border border-gray-200';
-                        let labelClass = 'text-[11px] text-gray-500';
-                        let valueClass = 'text-sm font-bold text-gray-900';
-
-                        if (isHighlight) {
-                          cardClass = 'bg-gradient-to-br from-blue-50 to-blue-100/40 border border-blue-200';
-                          labelClass = 'text-[11px] text-blue-600';
-                          valueClass = isPrice ? 'text-base font-bold text-blue-700' : 'text-base font-bold text-blue-800';
-                        } else if (isAccent) {
-                          cardClass = 'bg-gradient-to-br from-amber-50 to-orange-50/50 border border-amber-200';
-                          labelClass = 'text-[11px] text-amber-600';
-                          valueClass = 'text-sm font-bold text-amber-800';
-                        }
-
-                        const hasValue = value !== null
-                          && value !== undefined
-                          && value !== ''
-                          && !(Array.isArray(value) && value.length === 0);
-
-                        return (
+                      return (
+                        <div
+                          key={key}
+                          className="flex items-baseline py-1.5 border-b border-gray-100 last:border-b-0"
+                        >
+                          <div className="text-xs text-gray-500 w-24 flex-shrink-0">
+                            {field.label}
+                          </div>
                           <div
-                            key={key}
                             className={cn(
-                              'rounded-md px-3 py-2.5 transition-all hover:shadow-sm',
-                              cardClass,
+                              'text-sm font-medium min-w-0 flex-1',
+                              isPrice ? 'text-blue-600' : 'text-gray-800',
                             )}
                           >
-                            <div className={cn('mb-1 font-medium', labelClass)}>
-                              {field.label}
-                            </div>
-                            <div className={cn(
-                              'leading-tight min-h-[20px] flex items-center',
-                              valueClass,
-                              !hasValue && 'text-gray-300',
-                            )}>
-                              {renderFieldValue(field, value, isHighlight)}
-                            </div>
+                            {renderFieldValue(field, value)}
                           </div>
-                        );
-                      })}
-                    </div>
+                        </div>
+                      );
+                    })}
                   </div>
-                );
-              })}
+                </div>
+              ))}
             </div>
           </div>
         )}

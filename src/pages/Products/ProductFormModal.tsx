@@ -13,7 +13,11 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/Label';
 import { Switch } from '@/components/ui/Switch';
-import FileUploader from '@/components/ui/FileUploader';
+import {
+  ImageUpload,
+  MultiImageUpload,
+  VideoUpload,
+} from '@/components/FileUpload';
 import {
   CATEGORY_FIELDS,
   CATEGORY_LABELS,
@@ -75,11 +79,9 @@ const getDefaultValues = (
   for (const field of fields) {
     const key = String(field.key);
     if (product) {
-      const val = product[field.key as keyof Product];
+      const val = product[field.key];
       if (field.type === 'images' || field.type === 'videos') {
-        defaults[key] = Array.isArray(val) ? val.filter(Boolean) : [];
-      } else if (field.type === 'image') {
-        defaults[key] = val || '';
+        defaults[key] = Array.isArray(val) ? val : [];
       } else if (field.type === 'boolean') {
         defaults[key] = Boolean(val);
       } else if (val === null || val === undefined) {
@@ -125,8 +127,8 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
     setValue,
     watch,
     formState: { errors },
-  } = useForm<Record<string, unknown>>({
-    resolver: zodResolver(schema) as any,
+  } = useForm<z.infer<typeof schema>>({
+    resolver: zodResolver(schema),
     defaultValues,
   });
 
@@ -138,35 +140,10 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
   }, [open, product, category, fields, reset]);
 
   const handleFormSubmit = async (values: Record<string, unknown>) => {
-    const processed: Record<string, unknown> = { ...values };
-
-    for (const field of fields) {
-      const key = String(field.key);
-      if (field.type === 'image') {
-        const val = processed[key];
-        processed[key] =
-          val === '' || val === null || val === undefined ? null : String(val);
-      } else if (field.type === 'images' || field.type === 'videos') {
-        const val = processed[key];
-        if (Array.isArray(val)) {
-          processed[key] = val.filter((v: unknown) => Boolean(v));
-        } else {
-          processed[key] = [];
-        }
-      }
-    }
-
     const data: ProductCreateInput = {
       category,
-      ...processed,
+      ...values,
     } as unknown as ProductCreateInput;
-
-    console.log('[ProductForm] 提交数据:', JSON.stringify({
-      whiteBgImage: data.whiteBgImage,
-      realImages: (data as any).realImages,
-      realVideos: (data as any).realVideos,
-    }));
-
     await onSubmit(data);
   };
 
@@ -199,60 +176,54 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
     }
 
     if (field.type === 'image') {
-      const val = watch(key) as string | undefined;
-      const urls = val ? [val] : [];
+      const value = watch(key) as string;
       return (
-        <div key={key} className="flex-1 min-w-[280px] w-full">
-          <FileUploader
-            type="image"
-            label={field.label}
-            value={urls}
-            maxCount={1}
-            multiple={false}
-            description="点击上传白底图，支持 JPG/PNG/WebP"
-            onChange={(newUrls: string[]) => {
-              setValue(key, newUrls[0] || '', { shouldDirty: true });
-            }}
+        <div key={key} className="flex-1 min-w-[200px]">
+          <Label className="mb-1.5 block text-sm font-medium text-gray-700">
+            {field.label}
+            {isRequired && (
+              <span className="text-red-500 ml-0.5">*</span>
+            )}
+          </Label>
+          <ImageUpload
+            value={String(value || '')}
+            onChange={(url: string) => setValue(key, url)}
           />
         </div>
       );
     }
 
     if (field.type === 'images') {
-      const val = watch(key) as string[] | undefined;
-      const urls = Array.isArray(val) ? val : [];
+      const value = watch(key) as string[];
       return (
         <div key={key} className="flex-1 min-w-[280px] w-full">
-          <FileUploader
-            type="image"
-            label={field.label}
-            value={urls}
-            maxCount={20}
-            multiple
-            description="点击上传实拍图，支持多选，每张不超过 50MB"
-            onChange={(newUrls: string[]) => {
-              setValue(key, newUrls, { shouldDirty: true });
-            }}
+          <Label className="mb-1.5 block text-sm font-medium text-gray-700">
+            {field.label}
+            {isRequired && (
+              <span className="text-red-500 ml-0.5">*</span>
+            )}
+          </Label>
+          <MultiImageUpload
+            value={Array.isArray(value) ? value : []}
+            onChange={(urls: string[]) => setValue(key, urls)}
           />
         </div>
       );
     }
 
     if (field.type === 'videos') {
-      const val = watch(key) as string[] | undefined;
-      const urls = Array.isArray(val) ? val : [];
+      const value = watch(key) as string[];
       return (
         <div key={key} className="flex-1 min-w-[280px] w-full">
-          <FileUploader
-            type="video"
-            label={field.label}
-            value={urls}
-            maxCount={10}
-            multiple
-            description="点击上传实拍视频，支持多选，每个不超过 50MB"
-            onChange={(newUrls: string[]) => {
-              setValue(key, newUrls, { shouldDirty: true });
-            }}
+          <Label className="mb-1.5 block text-sm font-medium text-gray-700">
+            {field.label}
+            {isRequired && (
+              <span className="text-red-500 ml-0.5">*</span>
+            )}
+          </Label>
+          <VideoUpload
+            value={Array.isArray(value) ? value : []}
+            onChange={(urls: string[]) => setValue(key, urls)}
           />
         </div>
       );

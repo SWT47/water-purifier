@@ -177,12 +177,6 @@ async function handlePatch(
     if (data.isAutomatic !== undefined)
       updateData.isAutomatic = data.isAutomatic;
 
-    // Log image fields for debugging
-    console.log("[PATCH products] updateData image fields:", JSON.stringify({
-      whiteBgImage: updateData.whiteBgImage,
-      realImages: updateData.realImages,
-      realVideos: updateData.realVideos,
-    }));
     if (Object.keys(updateData).length === 0) {
       res.status(400).json({ error: '未提供可更新字段' });
       return;

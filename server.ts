@@ -4,20 +4,57 @@ import express, {
   type NextFunction,
 } from 'express';
 import path from 'node:path';
-import fs from 'node:fs';
 import productsHandler from './api/products';
 import productsCompareHandler from './api/products/compare';
 import productsByIdHandler from './api/products/[id]';
 import comboSchemesHandler from './api/combo-schemes';
 import comboSchemesByIdHandler from './api/combo-schemes/[id]';
-import uploadHandler from './api/upload';
+import { initDb, getDbInitError, isDbReady } from './db';
+
+// ========== 全局异常兜底，防止进程崩溃 ==========
+process.on('uncaughtException', (err: Error) => {
+  console.error('[FATAL] uncaughtException:', err.message);
+  console.error(err.stack);
+});
+
+process.on('unhandledRejection', (reason: unknown) => {
+  console.error(
+    '[FATAL] unhandledRejection:',
+    reason instanceof Error ? reason.message : String(reason),
+  );
+  if (reason instanceof Error && reason.stack) {
+    console.error(reason.stack);
+  }
+});
 
 const app = express();
+const PORT = Number(process.env.PORT) || 3000;
+const HOST = process.env.HOST || '0.0.0.0';
 
-app.use(express.json());
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// ========== 健康检查（探针用，必须在所有路由之前） ==========
+app.get('/healthz', (_req: Request, res: Response) => {
+  const err = getDbInitError();
+  if (err) {
+    // 数据库未就绪时也返回 200，避免探针反复重启容器
+    res.status(200).json({
+      status: 'degraded',
+      dbReady: false,
+      message: err.message,
+    });
+    return;
+  }
+  res.json({
+    status: 'ok',
+    dbReady: isDbReady(),
+    message: 'ok',
+  });
+});
 
 // ---------------------------------------------------------------
-// /api/*  — 业务接口（与 Vercel Functions 对齐）
+// /api/*  — 业务接口
 // 注意：静态路由在前，动态 :id 路由在后
 // ---------------------------------------------------------------
 
@@ -48,30 +85,8 @@ app.all('/api/combo-schemes/:id', (req: Request, res: Response) => {
   return comboSchemesByIdHandler(req as any, res as any);
 });
 
-// 文件上传
-app.all('/api/upload', (req: Request, res: Response) =>
-  uploadHandler(req as any, res as any),
-);
-
-// 本地上传文件静态服务（仅本地降级模式使用）
-const uploadDir = process.env.UPLOAD_DIR || 'uploads';
-const uploadPath = path.isAbsolute(uploadDir)
-  ? uploadDir
-  : path.join(process.cwd(), uploadDir);
-if (fs.existsSync(uploadPath)) {
-  app.use('/uploads', express.static(uploadPath));
-} else {
-  try {
-    fs.mkdirSync(uploadPath, { recursive: true });
-    app.use('/uploads', express.static(uploadPath));
-  } catch {
-    // Vercel serverless 环境只读文件系统，跳过静态目录创建
-  }
-}
-
 // ---------------------------------------------------------------
 // /openapi/*  — 匿名读接口（只读，供公开访问用）
-// 写方法（POST/PUT/PATCH/DELETE）直接返回 405
 // ---------------------------------------------------------------
 
 function readOnly(
@@ -112,19 +127,60 @@ app.get(
     readOnly(req, res, next, comboSchemesHandler),
 );
 
+// ========== 全局错误处理中间件 ==========
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
+  console.error('[API ERROR]', err.message);
+  res.status(500).json({
+    error:
+      process.env.NODE_ENV === 'production' && !err.message.includes('数据库')
+        ? '服务器内部错误'
+        : err.message,
+  });
+});
+
 // ---------------------------------------------------------------
 // 静态文件 + SPA fallback
 // ---------------------------------------------------------------
-
-app.use(express.static('dist'));
+const distDir = path.join(process.cwd(), 'dist');
+app.use(express.static(distDir));
 
 app.get('*', (_req: Request, res: Response) => {
-  res.sendFile(path.join(process.cwd(), 'dist', 'index.html'));
+  res.sendFile(path.join(distDir, 'index.html'));
 });
 
-const port = process.env.PORT || 3000;
+// ========== 启动 ==========
+async function startServer() {
+  console.log('========================================');
+  console.log('🚀 净水器直播展示系统启动中...');
+  console.log(`📍 环境: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`📍 端口: ${PORT}`);
+  console.log(`📍 绑定地址: ${HOST}`);
+  console.log(`📍 工作目录: ${process.cwd()}`);
+  console.log(`📍 DATABASE_URL: ${process.env.DATABASE_URL ? '已配置' : '未配置'}`);
+  console.log(`📍 POSTGRES_URL: ${process.env.POSTGRES_URL ? '已配置' : '未配置'}`);
+  console.log('========================================');
 
-app.listen(port, () => {
-  // eslint-disable-next-line no-console
-  console.log(`Server running on port ${port}`);
-});
+  // 初始化数据库（失败不崩溃，服务照常启动）
+  const dbOk = await initDb();
+  if (dbOk) {
+    console.log('✅ 数据库连接成功');
+  } else {
+    const err = getDbInitError();
+    console.warn('⚠️  数据库连接失败，API 将返回 503 错误，服务仍在运行');
+    console.warn(`⚠️  失败原因: ${err?.message}`);
+  }
+
+  app.listen(PORT, HOST, () => {
+    console.log('========================================');
+    console.log(`✅ 服务已启动: http://${HOST}:${PORT}`);
+    console.log(`✅ 健康检查: http://${HOST}:${PORT}/healthz`);
+    console.log(`✅ 数据库状态: ${isDbReady() ? '已连接' : '未连接'}`);
+    console.log('========================================');
+  }).on('error', (err: Error) => {
+    console.error('❌ 服务启动失败:', err.message);
+    console.error(err.stack);
+  });
+}
+
+startServer();

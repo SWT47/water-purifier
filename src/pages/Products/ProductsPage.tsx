@@ -1,416 +1,393 @@
-import { useState, useEffect, useCallback, useMemo } from 'react'
-import { useSearchParams } from 'react-router-dom'
-import type { Product, ProductCategory } from '@/types'
-import { getProducts, getBrands } from '@/api'
-import FilterBar from './FilterBar'
-import ProductTable from './ProductTable'
-import ProductImageCard from '@/components/ProductImageCard'
-import ProductDetailModal from '@/components/ProductDetailModal'
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
+import CategorySidebar from './CategorySidebar';
+import FilterBar, { type FilterValues, type ViewMode } from './FilterBar';
+import ProductTable from './ProductTable';
+import ProductFormModal from './ProductFormModal';
+import ImportModal from './ImportModal';
+import {
+  getProductList,
+  createProduct,
+  updateProduct,
+  deleteProduct,
+} from '@/api/products';
+import type {
+  Product,
+  ProductCategory,
+  ProductCreateInput,
+  ProductListResult,
+} from '@/utils/constants';
+import { CATEGORY_LABELS, ALL_CATEGORIES } from '@/utils/constants';
+import { Smartphone } from 'lucide-react';
 
-const DEFAULT_PAGE_SIZE = 12
+const ProductsPage: React.FC = () => {
+  const { category: categoryParam } = useParams<{ category: string }>();
+  const navigate = useNavigate();
 
-// mock data for fallback when API not available
-const MOCK_PRODUCTS: Product[] = [
-  {
-    id: '1',
-    category: 'water_purifier',
-    brand: '小米',
-    name: '小米净水器H800G Pro 家用直饮RO反渗透',
-    model: 'MR842-C',
-    whiteBgImage: 'https://picsum.photos/seed/water1/600/600',
-    launchYear: '2025',
-    isOnSale: true,
-    dailyPrice: 2799,
-    referencePrice: 2499,
-    flux: '800G',
-    waterFlowRate: '2.15L/min',
-    waterMode: '双出水',
-    roMembraneBrand: '陶氏',
-    filterTotalCost: 365,
-    activatedCarbon: '椰壳活性炭',
-    hasMaternityCert: true,
-    hasZeroStagnantWater: true,
-    dimensions: '430×160×410mm',
-    realImages: [
-      'https://picsum.photos/seed/water1a/800/800',
-      'https://picsum.photos/seed/water1b/800/800',
-      'https://picsum.photos/seed/water1c/800/800',
-      'https://picsum.photos/seed/water1d/800/800',
-    ],
-    realVideos: [],
-    createdAt: '2026-01-15T00:00:00Z',
-  },
-  {
-    id: '2',
-    category: 'water_purifier',
-    brand: '美的',
-    name: '美的白泽1000G Pro 净水器家用直饮',
-    model: 'MRO1787D-1000G',
-    whiteBgImage: 'https://picsum.photos/seed/water2/600/600',
-    launchYear: '2025',
-    isOnSale: true,
-    dailyPrice: 3599,
-    referencePrice: 3299,
-    flux: '1000G',
-    waterFlowRate: '2.72L/min',
-    waterMode: '单出水',
-    roMembraneBrand: '世韩',
-    filterTotalCost: 298,
-    hasZeroStagnantWater: true,
-    dimensions: '440×160×430mm',
-    realImages: [
-      'https://picsum.photos/seed/water2a/800/800',
-      'https://picsum.photos/seed/water2b/800/800',
-    ],
-    realVideos: ['https://picsum.photos/seed/water2v/800/450'],
-    createdAt: '2026-01-10T00:00:00Z',
-  },
-  {
-    id: '3',
-    category: 'pipeline_machine',
-    brand: 'COLMO',
-    name: 'COLMO 壁挂式管线机 即热式饮水机',
-    model: 'CWG-RA08',
-    whiteBgImage: 'https://picsum.photos/seed/water3/600/600',
-    launchYear: '2024',
-    isOnSale: true,
-    dailyPrice: 3299,
-    referencePrice: 2999,
-    heatingElement: '稀土厚膜',
-    heatingCapacity: '即开即热',
-    tempControl: '6档控温',
-    hasWaterTank: false,
-    dimensions: '370×180×520mm',
-    realImages: [
-      'https://picsum.photos/seed/water3a/800/800',
-    ],
-    realVideos: [],
-    createdAt: '2026-01-05T00:00:00Z',
-  },
-  {
-    id: '4',
-    category: 'pre_filter',
-    brand: '3M',
-    name: '3M 前置过滤器 全屋自来水过滤器',
-    model: 'BFS3-40BK',
-    whiteBgImage: 'https://picsum.photos/seed/water4/600/600',
-    launchYear: '2023',
-    isOnSale: true,
-    dailyPrice: 1099,
-    referencePrice: 899,
-    flux: '4T/h',
-    isAutomatic: true,
-    realImages: [],
-    realVideos: [],
-    createdAt: '2026-01-01T00:00:00Z',
-  },
-  {
-    id: '5',
-    category: 'big_white_bottle',
-    brand: '滨特尔',
-    name: '滨特尔大白瓶 前置过滤器 全屋中央净水',
-    model: 'BF-10-B',
-    whiteBgImage: 'https://picsum.photos/seed/water5/600/600',
-    launchYear: '2024',
-    isOnSale: true,
-    referencePrice: 1299,
-    flux: '2T/h',
-    realImages: [],
-    realVideos: [],
-    createdAt: '2026-01-08T00:00:00Z',
-  },
-  {
-    id: '6',
-    category: 'central_purifier',
-    brand: '怡口',
-    name: '怡口中央净水机 全屋净化系统',
-    model: 'ETF2100PF10',
-    whiteBgImage: 'https://picsum.photos/seed/water6/600/600',
-    launchYear: '2025',
-    isOnSale: true,
-    referencePrice: 8800,
-    flux: '2.5T/h',
-    activatedCarbon: '椰壳活性炭+KDF',
-    realImages: [],
-    realVideos: [],
-    createdAt: '2026-01-12T00:00:00Z',
-  },
-  {
-    id: '7',
-    category: 'central_softener',
-    brand: '软水世家',
-    name: '中央软水机 家用全屋软水系统',
-    model: 'RS-1T',
-    whiteBgImage: 'https://picsum.photos/seed/water7/600/600',
-    launchYear: '2024',
-    isOnSale: true,
-    referencePrice: 4599,
-    flux: '1T/h',
-    isAutomatic: true,
-    realImages: [],
-    realVideos: [],
-    createdAt: '2026-01-14T00:00:00Z',
-  },
-  {
-    id: '8',
-    category: 'water_purifier',
-    brand: '海尔',
-    name: '海尔净水器600G 家用直饮RO反渗透',
-    model: 'HRO600-4A',
-    whiteBgImage: 'https://picsum.photos/seed/water8/600/600',
-    launchYear: '2023',
-    isOnSale: true,
-    dailyPrice: 2199,
-    referencePrice: 1899,
-    flux: '600G',
-    waterFlowRate: '1.5L/min',
-    roMembraneBrand: '汇通',
-    filterTotalCost: 240,
-    hasZeroStagnantWater: false,
-    waterMode: '双出水',
-    realImages: [],
-    realVideos: [],
-    createdAt: '2026-01-03T00:00:00Z',
-  },
-  {
-    id: '9',
-    category: 'pipeline_machine',
-    brand: '美的',
-    name: '美的管线机 家用壁挂式即热饮水机',
-    model: 'MG908-R',
-    whiteBgImage: 'https://picsum.photos/seed/water9/600/600',
-    launchYear: '2025',
-    isOnSale: true,
-    referencePrice: 1699,
-    heatingElement: '即热式',
-    heatingCapacity: '3秒速热',
-    tempControl: '4档控温',
-    hasWaterTank: true,
-    realImages: [],
-    realVideos: [],
-    createdAt: '2026-01-06T00:00:00Z',
-  },
-  {
-    id: '10',
-    category: 'pre_filter',
-    brand: '汉斯希尔',
-    name: '汉斯希尔 前置过滤器 家用全屋净水',
-    model: 'WS-2314-20-003',
-    whiteBgImage: 'https://picsum.photos/seed/water10/600/600',
-    launchYear: '2024',
-    isOnSale: true,
-    referencePrice: 1599,
-    flux: '3.5T/h',
-    isAutomatic: false,
-    realImages: [],
-    realVideos: [],
-    createdAt: '2026-01-07T00:00:00Z',
-  },
-]
+  const category = useMemo(() => {
+    if (
+      categoryParam &&
+      ALL_CATEGORIES.includes(categoryParam as ProductCategory)
+    ) {
+      return categoryParam as ProductCategory;
+    }
+    return 'water_purifier';
+  }, [categoryParam]);
 
-const ALL_BRANDS = ['小米', '美的', 'COLMO', '3M', '滨特尔', '怡口', '海尔', '软水世家']
+  const [items, setItems] = useState<Product[]>([]);
+  const [total, setTotal] = useState<number>(0);
+  const [page, setPage] = useState<number>(1);
+  const [pageSize, setPageSize] = useState<number>(20);
+  const [loading, setLoading] = useState<boolean>(false);
+  const [selectedRowKeys, setSelectedRowKeys] = useState<string[]>([]);
+  const [viewMode, setViewMode] = useState<ViewMode>('table');
 
-export default function ProductsPage() {
-  const [searchParams, setSearchParams] = useSearchParams()
-  const urlCategory = searchParams.get('cat') as ProductCategory | ''
+  const [filters, setFilters] = useState<FilterValues>({
+    keyword: '',
+    brand: '',
+    minPrice: '',
+    maxPrice: '',
+    isOnSale: '',
+  });
 
-  const [products, setProducts] = useState<Product[]>([])
-  const [brands, setBrands] = useState<string[]>([])
-  const [loading, setLoading] = useState(false)
-  const [page, setPage] = useState(1)
-  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE)
-  const [total, setTotal] = useState(0)
+  const [formModalOpen, setFormModalOpen] = useState<boolean>(false);
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [importModalOpen, setImportModalOpen] = useState<boolean>(false);
 
-  const [keyword, setKeyword] = useState('')
-  const [category, setCategory] = useState<ProductCategory | ''>(urlCategory || '')
-  const [brand, setBrand] = useState('')
-  const [viewMode, setViewMode] = useState<'card' | 'table'>('card')
-
-  const [detailOpen, setDetailOpen] = useState(false)
-  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
-
-  // Fetch brands
+  // Load products
   useEffect(() => {
-    const fetchBrands = async () => {
+    let cancelled = false;
+    setLoading(true);
+
+    const params: Record<string, unknown> = {
+      category,
+      page,
+      pageSize,
+    };
+    if (filters.keyword) params.keyword = filters.keyword;
+    if (filters.brand) params.brand = filters.brand;
+    if (filters.isOnSale !== '') params.isOnSale = filters.isOnSale === 'true';
+    if (filters.minPrice) params.minPrice = Number(filters.minPrice);
+    if (filters.maxPrice) params.maxPrice = Number(filters.maxPrice);
+
+    getProductList(params as Parameters<typeof getProductList>[0])
+      .then((result: ProductListResult) => {
+        if (cancelled) return;
+        setItems(result.items);
+        setTotal(result.total);
+        setPage(result.page);
+        setPageSize(result.pageSize);
+      })
+      .catch((err: unknown) => {
+        if (cancelled) return;
+        console.error('加载产品列表失败', err);
+        toast.error('加载产品列表失败');
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [category, page, pageSize, filters]);
+
+  // Reset selected when category changes
+  useEffect(() => {
+    setSelectedRowKeys([]);
+  }, [category, filters]);
+
+  const brands = useMemo(() => {
+    const set = new Set<string>();
+    for (const p of items) {
+      if (p.brand) set.add(p.brand);
+    }
+    return Array.from(set).sort();
+  }, [items]);
+
+  const handleCategoryChange = useCallback(
+    (cat: ProductCategory) => {
+      navigate(`/products/${cat}`);
+      setPage(1);
+    },
+    [navigate],
+  );
+
+  const handlePageChange = useCallback((newPage: number, newPageSize: number) => {
+    setPage(newPage);
+    setPageSize(newPageSize);
+  }, []);
+
+  const handleFilterChange = useCallback((values: FilterValues) => {
+    setFilters(values);
+    setPage(1);
+  }, []);
+
+  const handleAdd = useCallback(() => {
+    setEditingProduct(null);
+    setFormModalOpen(true);
+  }, []);
+
+  const handleEdit = useCallback((product: Product) => {
+    setEditingProduct(product);
+    setFormModalOpen(true);
+  }, []);
+
+  const handleView = useCallback(
+    (product: Product) => {
+      navigate(`/products/detail/${product.id}`);
+    },
+    [navigate],
+  );
+
+  const handleDelete = useCallback((product: Product) => {
+    if (!confirm(`确定要删除「${product.name || product.model || '产品'}」吗？`)) {
+      return;
+    }
+    deleteProduct(product.id)
+      .then(() => {
+        toast.success('删除成功');
+        setSelectedRowKeys((prev) => prev.filter((id: string) => id !== product.id));
+        setItems((prev) => prev.filter((p: Product) => p.id !== product.id));
+        setTotal((prev) => Math.max(0, prev - 1));
+      })
+      .catch((err: unknown) => {
+        console.error('删除失败', err);
+        toast.error('删除失败');
+      });
+  }, []);
+
+  const handleSubmitForm = useCallback(
+    async (data: ProductCreateInput) => {
       try {
-        const data = await getBrands()
-        setBrands(data)
-      } catch {
-        setBrands(ALL_BRANDS)
-      }
-    }
-    fetchBrands()
-  }, [])
-
-  // Sync URL param with local state
-  useEffect(() => {
-    if (urlCategory !== category) {
-      setCategory(urlCategory || '')
-      setPage(1)
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [urlCategory])
-
-  const fetchProducts = useCallback(async () => {
-    setLoading(true)
-    try {
-      const res = await getProducts({
-        page,
-        pageSize,
-        category,
-        keyword,
-        brand,
-      })
-      setProducts(res.items)
-      setTotal(res.total)
-    } catch {
-      // Fallback to mock data
-      const all = MOCK_PRODUCTS.filter((p: Product) => {
-        if (category && p.category !== category) return false
-        if (brand && p.brand !== brand) return false
-        if (keyword) {
-          const kw = keyword.toLowerCase()
-          if (
-            !p.name.toLowerCase().includes(kw) &&
-            !p.brand.toLowerCase().includes(kw) &&
-            !(p.model || '').toLowerCase().includes(kw)
-          )
-            return false
+        if (editingProduct) {
+          await updateProduct(editingProduct.id, data);
+          toast.success('保存成功');
+        } else {
+          await createProduct(data);
+          toast.success('创建成功');
         }
-        return true
-      })
-      const start = (page - 1) * pageSize
-      setProducts(all.slice(start, start + pageSize))
-      setTotal(all.length)
-    } finally {
-      setLoading(false)
-    }
-  }, [page, pageSize, category, keyword, brand])
-
-  useEffect(() => {
-    fetchProducts()
-  }, [fetchProducts])
-
-  const handleSearch = () => {
-    setPage(1)
-  }
-
-  const handleCategoryChange = (value: ProductCategory | '') => {
-    setCategory(value)
-    setPage(1)
-    if (value) {
-      searchParams.set('cat', value)
-    } else {
-      searchParams.delete('cat')
-    }
-    setSearchParams(searchParams)
-  }
-
-  const handleViewProduct = (product: Product) => {
-    setSelectedProduct(product)
-    setDetailOpen(true)
-  }
-
-  const pageTitle = useMemo(() => {
-    if (category) {
-      const labels: Record<string, string> = {
-        water_purifier: '净水器',
-        pipeline_machine: '管线机',
-        pre_filter: '前置过滤器',
-        big_white_bottle: '大白瓶',
-        central_purifier: '中央净水机',
-        central_softener: '中央软水机',
+        setFormModalOpen(false);
+        setEditingProduct(null);
+        // Reload
+        setPage(1);
+      } catch (err: unknown) {
+        console.error('保存失败', err);
+        toast.error('保存失败');
       }
-      return labels[category] || '产品列表'
-    }
-    return '全部产品'
-  }, [category])
+    },
+    [editingProduct],
+  );
+
+  const handleCompare = useCallback(() => {
+    if (selectedRowKeys.length === 0) return;
+    const ids = selectedRowKeys.join(',');
+    navigate(`/compare?ids=${encodeURIComponent(ids)}`);
+  }, [selectedRowKeys, navigate]);
+
+  const handleImport = useCallback(() => {
+    setImportModalOpen(true);
+  }, []);
+
+  const handleImportSuccess = useCallback(() => {
+    setPage(1);
+  }, []);
+
+  const categoryLabel = CATEGORY_LABELS[category] || '产品';
 
   return (
-    <div>
-      <div className="mb-4 flex items-center justify-between">
-        <h1 className="text-xl font-semibold text-gray-900">{pageTitle}</h1>
-        <div className="text-sm text-gray-500">
-          共 <span className="font-medium text-gray-800">{total}</span> 款产品
+    <div className="h-full flex flex-col bg-gray-50">
+      {/* Top bar */}
+      <div className="h-12 bg-black text-white flex items-center px-6 flex-shrink-0">
+        <h1 className="text-sm font-semibold">净水器直播展示系统</h1>
+        <span className="ml-2 text-xs text-white/60">
+          · {categoryLabel}管理
+        </span>
+        <button
+          onClick={() => navigate(`/live/${category}`)}
+          className="ml-auto bg-white/10 hover:bg-white/20 text-white text-xs px-3 py-1.5 rounded flex items-center gap-1.5 transition-colors"
+        >
+          <Smartphone className="w-3.5 h-3.5" />
+          直播模式
+        </button>
+      </div>
+
+      <div className="flex-1 flex overflow-hidden">
+        <CategorySidebar
+          activeCategory={category}
+          onCategoryChange={handleCategoryChange}
+        />
+
+        <div className="flex-1 flex flex-col overflow-hidden">
+          <FilterBar
+            category={category}
+            brands={brands}
+            selectedCount={selectedRowKeys.length}
+            viewMode={viewMode}
+            onFilterChange={handleFilterChange}
+            onAdd={handleAdd}
+            onImport={handleImport}
+            onCompare={handleCompare}
+            onViewModeChange={setViewMode}
+          />
+
+          {viewMode === 'table' ? (
+            <ProductTable
+              category={category}
+              items={items}
+              total={total}
+              page={page}
+              pageSize={pageSize}
+              loading={loading}
+              selectedRowKeys={selectedRowKeys}
+              onSelectionChange={setSelectedRowKeys}
+              onPageChange={handlePageChange}
+              onView={handleView}
+              onEdit={handleEdit}
+              onDelete={handleDelete}
+            />
+          ) : (
+            <ProductCardView
+              items={items}
+              total={total}
+              page={page}
+              pageSize={pageSize}
+              loading={loading}
+              onPageChange={handlePageChange}
+              onView={handleView}
+              onEdit={handleEdit}
+            />
+          )}
         </div>
       </div>
 
-      <FilterBar
-        keyword={keyword}
-        onKeywordChange={setKeyword}
+      <ProductFormModal
+        open={formModalOpen}
+        product={editingProduct}
         category={category}
-        onCategoryChange={handleCategoryChange}
-        brand={brand}
-        onBrandChange={setBrand}
-        brands={brands}
-        viewMode={viewMode}
-        onViewModeChange={setViewMode}
-        onSearch={handleSearch}
+        onClose={() => {
+          setFormModalOpen(false);
+          setEditingProduct(null);
+        }}
+        onSubmit={handleSubmitForm}
       />
 
-      {viewMode === 'table' ? (
-        <ProductTable
-          products={products}
-          loading={loading}
-          page={page}
-          pageSize={pageSize}
-          total={total}
-          onPageChange={setPage}
-          onPageSizeChange={setPageSize}
-          onRowClick={handleViewProduct}
-        />
-      ) : (
-        <div>
-          {loading ? (
-            <div className="text-center py-16 text-gray-400">加载中...</div>
-          ) : products.length === 0 ? (
-            <div className="text-center py-16 text-gray-400 bg-white rounded-[6px] border border-[#E5E7EB]">
-              暂无匹配的产品
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-              {products.map((product: Product) => (
-                <ProductImageCard
-                  key={product.id}
-                  product={product}
-                  onClick={() => handleViewProduct(product)}
-                />
-              ))}
-            </div>
-          )}
-
-          {/* 卡片模式分页 */}
-          {total > pageSize && (
-            <div className="flex items-center justify-center gap-1 mt-6">
-              <button
-                onClick={() => setPage(Math.max(1, page - 1))}
-                disabled={page === 1}
-                className="h-8 px-3 text-sm rounded-[6px] border border-[#E5E7EB] bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-              >
-                上一页
-              </button>
-              <span className="h-8 px-3 flex items-center text-sm text-gray-500">
-                {page} / {Math.max(1, Math.ceil(total / pageSize))}
-              </span>
-              <button
-                onClick={() =>
-                  setPage(Math.min(Math.ceil(total / pageSize), page + 1))
-                }
-                disabled={page >= Math.ceil(total / pageSize)}
-                className="h-8 px-3 text-sm rounded-[6px] border border-[#E5E7EB] bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-              >
-                下一页
-              </button>
-            </div>
-          )}
-        </div>
-      )}
-
-      <ProductDetailModal
-        open={detailOpen}
-        product={selectedProduct}
-        onClose={() => setDetailOpen(false)}
+      <ImportModal
+        open={importModalOpen}
+        onOpenChange={setImportModalOpen}
+        defaultCategory={category}
+        onSuccess={handleImportSuccess}
       />
     </div>
-  )
+  );
+};
+
+/* ---------- Card View (complementary) ---------- */
+
+interface CardViewProps {
+  items: Product[];
+  total: number;
+  page: number;
+  pageSize: number;
+  loading: boolean;
+  onPageChange: (page: number, pageSize: number) => void;
+  onView: (product: Product) => void;
+  onEdit: (product: Product) => void;
 }
+
+const ProductCardView: React.FC<CardViewProps> = ({
+  items,
+  total,
+  page,
+  pageSize,
+  loading,
+  onPageChange,
+  onView,
+  onEdit,
+}) => {
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+
+  return (
+    <div className="flex-1 flex flex-col p-4 overflow-hidden">
+      <div className="flex-1 overflow-y-auto">
+        {loading ? (
+          <div className="text-center py-20 text-gray-400 text-sm">加载中...</div>
+        ) : items.length === 0 ? (
+          <div className="text-center py-20 text-gray-400 text-sm">暂无产品</div>
+        ) : (
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+            {items.map((product: Product) => (
+              <div
+                key={product.id}
+                className="bg-white rounded-md overflow-hidden shadow-card-sm border border-gray-100 hover:-translate-y-0.5 hover:shadow-card-md transition-all cursor-pointer"
+                onClick={() => onView(product)}
+              >
+                <div className="w-full aspect-square bg-gradient-to-b from-gray-50 to-gray-100 flex items-center justify-center">
+                  {product.whiteBgImage ? (
+                    <img
+                      src={product.whiteBgImage}
+                      alt={product.name || product.model || '产品图片'}
+                      className="w-full h-full object-contain p-3"
+                    />
+                  ) : (
+                    <span className="text-gray-400 text-xs">暂无图片</span>
+                  )}
+                </div>
+                <div className="p-3">
+                  <div className="text-[11px] text-gray-500">
+                    {product.brand || '未知品牌'}
+                  </div>
+                  <h3 className="text-sm font-semibold text-gray-900 truncate mt-0.5">
+                    {product.name || product.model || '产品名称'}
+                  </h3>
+                  {product.referencePrice != null ? (
+                    <div className="text-lg font-bold text-blue-600 mt-1">
+                      ¥{Number(product.referencePrice).toLocaleString()}
+                    </div>
+                  ) : (
+                    <div className="text-sm text-gray-400 mt-1">价格待定</div>
+                  )}
+                  <button
+                    className="w-full mt-2 text-xs text-gray-500 hover:text-blue-600 py-1 border border-gray-200 rounded"
+                    onClick={(e: React.MouseEvent) => {
+                      e.stopPropagation();
+                      onEdit(product);
+                    }}
+                  >
+                    编辑
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="flex items-center justify-between px-2 py-3 text-sm text-gray-600 flex-shrink-0">
+        <div>共 {total} 条</div>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => onPageChange(page - 1, pageSize)}
+            disabled={page <= 1}
+            className="px-3 py-1 rounded border border-gray-300 text-sm disabled:opacity-50 hover:bg-gray-50"
+          >
+            上一页
+          </button>
+          <span className="text-gray-500">
+            第 {page} / {totalPages} 页
+          </span>
+          <button
+            onClick={() => onPageChange(page + 1, pageSize)}
+            disabled={page >= totalPages}
+            className="px-3 py-1 rounded border border-gray-300 text-sm disabled:opacity-50 hover:bg-gray-50"
+          >
+            下一页
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default ProductsPage;
