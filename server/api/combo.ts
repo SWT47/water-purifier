@@ -1,7 +1,7 @@
 // 搭配方案 CRUD
 import { Router } from 'express';
 import { randomUUID } from 'node:crypto';
-import { db } from '../db/index.js';
+import { db, getDbType } from '../db/index.js';
 import { success, fail, serverError } from '../utils/response.js';
 import type { ComboScheme } from '../../shared/types.js';
 
@@ -11,19 +11,38 @@ function rowToCombo(row: Record<string, unknown>): ComboScheme {
   return {
     id: String(row.id),
     name: String(row.name),
-    productIds: row.productIds ? JSON.parse(row.productIds as string) : [],
+    productIds: parseJsonArray(row.productIds),
     livePrice: row.livePrice as number | null,
     createdAt: String(row.createdAt),
     updatedAt: String(row.updatedAt),
   };
 }
 
+// JSON 字段适配：SQLite 返回字符串，PostgreSQL 返回数组
+function parseJsonArray(val: unknown): string[] {
+  if (Array.isArray(val)) return val as string[];
+  if (typeof val === 'string' && val) {
+    try {
+      return JSON.parse(val);
+    } catch {
+      return [];
+    }
+  }
+  return [];
+}
+
+// JSON 字段写适配
+function toJsonArray(val: string[] | undefined): string | string[] {
+  if (!val) return getDbType() === 'postgres' ? [] : '[]';
+  return getDbType() === 'postgres' ? val : JSON.stringify(val);
+}
+
 // GET /api/combo-schemes — 列表
-comboRouter.get('/', (_req, res) => {
+comboRouter.get('/', async (_req, res) => {
   try {
-    const rows = db.prepare(
-      'SELECT * FROM combo_schemes ORDER BY createdAt DESC'
-    ).all() as Record<string, unknown>[];
+    const rows = await db.query(
+      'SELECT * FROM combo_schemes ORDER BY "createdAt" DESC'
+    );
     const items: ComboScheme[] = rows.map(rowToCombo);
     success(res, items);
   } catch (err) {
@@ -32,7 +51,7 @@ comboRouter.get('/', (_req, res) => {
 });
 
 // POST /api/combo-schemes — 创建
-comboRouter.post('/', (req, res) => {
+comboRouter.post('/', async (req, res) => {
   try {
     const body = req.body as {
       name?: string;
@@ -47,12 +66,12 @@ comboRouter.post('/', (req, res) => {
 
     const now = new Date().toISOString();
     const id = randomUUID();
-    const productIds = body.productIds ? JSON.stringify(body.productIds) : '[]';
+    const productIds = toJsonArray(body.productIds);
 
-    db.prepare(`
-      INSERT INTO combo_schemes (id, name, productIds, livePrice, createdAt, updatedAt)
+    await db.run(`
+      INSERT INTO combo_schemes (id, name, "productIds", "livePrice", "createdAt", "updatedAt")
       VALUES (@id, @name, @productIds, @livePrice, @createdAt, @updatedAt)
-    `).run({
+    `, {
       id,
       name: body.name.trim(),
       productIds,
@@ -61,15 +80,15 @@ comboRouter.post('/', (req, res) => {
       updatedAt: now,
     });
 
-    const row = db.prepare('SELECT * FROM combo_schemes WHERE id = ?').get(id) as Record<string, unknown>;
-    success(res, rowToCombo(row), '创建成功');
+    const row = await db.get('SELECT * FROM combo_schemes WHERE id = @id', { id });
+    success(res, row ? rowToCombo(row) : null, '创建成功');
   } catch (err) {
     serverError(res, err);
   }
 });
 
 // PATCH /api/combo-schemes/:id — 更新
-comboRouter.patch('/:id', (req, res) => {
+comboRouter.patch('/:id', async (req, res) => {
   try {
     const { id } = req.params;
     const body = req.body as {
@@ -78,7 +97,7 @@ comboRouter.patch('/:id', (req, res) => {
       livePrice?: number | null;
     };
 
-    const existing = db.prepare('SELECT id FROM combo_schemes WHERE id = ?').get(id);
+    const existing = await db.get('SELECT id FROM combo_schemes WHERE id = @id', { id });
     if (!existing) {
       fail(res, '搭配方案不存在', 404);
       return;
@@ -96,11 +115,11 @@ comboRouter.patch('/:id', (req, res) => {
       params.name = body.name.trim();
     }
     if (body.productIds !== undefined) {
-      sets.push('productIds = @productIds');
-      params.productIds = JSON.stringify(body.productIds);
+      sets.push('"productIds" = @productIds');
+      params.productIds = toJsonArray(body.productIds);
     }
     if (body.livePrice !== undefined) {
-      sets.push('livePrice = @livePrice');
+      sets.push('"livePrice" = @livePrice');
       params.livePrice = body.livePrice;
     }
 
@@ -109,24 +128,24 @@ comboRouter.patch('/:id', (req, res) => {
       return;
     }
 
-    sets.push('updatedAt = @updatedAt');
+    sets.push('"updatedAt" = @updatedAt');
     params.updatedAt = new Date().toISOString();
 
     const sql = `UPDATE combo_schemes SET ${sets.join(', ')} WHERE id = @id`;
-    db.prepare(sql).run(params);
+    await db.run(sql, params);
 
-    const row = db.prepare('SELECT * FROM combo_schemes WHERE id = ?').get(id) as Record<string, unknown>;
-    success(res, rowToCombo(row), '更新成功');
+    const row = await db.get('SELECT * FROM combo_schemes WHERE id = @id', { id });
+    success(res, row ? rowToCombo(row) : null, '更新成功');
   } catch (err) {
     serverError(res, err);
   }
 });
 
 // DELETE /api/combo-schemes/:id — 删除
-comboRouter.delete('/:id', (req, res) => {
+comboRouter.delete('/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const result = db.prepare('DELETE FROM combo_schemes WHERE id = ?').run(id);
+    const result = await db.run('DELETE FROM combo_schemes WHERE id = @id', { id });
     if (result.changes === 0) {
       fail(res, '搭配方案不存在', 404);
       return;

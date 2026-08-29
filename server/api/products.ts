@@ -3,7 +3,7 @@ import { Router } from 'express';
 import { randomUUID } from 'node:crypto';
 import multer from 'multer';
 import xlsx from 'xlsx';
-import { db } from '../db/index.js';
+import { db, getDbType } from '../db/index.js';
 import { success, fail, serverError } from '../utils/response.js';
 import { EXCEL_COLUMN_MAP } from '../../shared/types.js';
 import type { Product, ProductCategory, ProductListResult } from '../../shared/types.js';
@@ -34,8 +34,8 @@ function rowToProduct(row: Record<string, unknown>): Product {
     activatedCarbon: row.activatedCarbon as string | null,
     hasMaternityCert: Boolean(row.hasMaternityCert),
     hasZeroStagnantWater: Boolean(row.hasZeroStagnantWater),
-    realImages: row.realImages ? JSON.parse(row.realImages as string) : [],
-    realVideos: row.realVideos ? JSON.parse(row.realVideos as string) : [],
+    realImages: parseJsonArray(row.realImages),
+    realVideos: parseJsonArray(row.realVideos),
     heatingElement: row.heatingElement as string | null,
     heatingCapacity: row.heatingCapacity as string | null,
     tempControl: row.tempControl as string | null,
@@ -46,8 +46,27 @@ function rowToProduct(row: Record<string, unknown>): Product {
   };
 }
 
+// JSON 字段适配：SQLite 返回字符串，PostgreSQL 返回数组
+function parseJsonArray(val: unknown): string[] {
+  if (Array.isArray(val)) return val as string[];
+  if (typeof val === 'string' && val) {
+    try {
+      return JSON.parse(val);
+    } catch {
+      return [];
+    }
+  }
+  return [];
+}
+
+// JSON 字段写适配：PostgreSQL 用 jsonb 直接存数组，SQLite 存字符串
+function toJsonArray(val: string[] | undefined): string | string[] {
+  if (!val) return getDbType() === 'postgres' ? [] : '[]';
+  return getDbType() === 'postgres' ? val : JSON.stringify(val);
+}
+
 // GET /api/products — 列表分页
-productsRouter.get('/', (req, res) => {
+productsRouter.get('/', async (req, res) => {
   try {
     const {
       category,
@@ -74,7 +93,7 @@ productsRouter.get('/', (req, res) => {
       params.brand = brand;
     }
     if (isOnSale !== undefined && isOnSale !== '') {
-      whereClauses.push('isOnSale = @isOnSale');
+      whereClauses.push('"isOnSale" = @isOnSale');
       params.isOnSale = isOnSale === 'true' || isOnSale === '1' ? 1 : 0;
     }
     if (keyword) {
@@ -84,12 +103,13 @@ productsRouter.get('/', (req, res) => {
 
     const whereSql = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
 
-    const countRow = db.prepare(`SELECT COUNT(*) as c FROM products ${whereSql}`).get(params) as { c: number };
-    const total = countRow.c;
+    const countRow = await db.get(`SELECT COUNT(*) as c FROM products ${whereSql}`, params);
+    const total = countRow ? Number(countRow.c) : 0;
 
-    const rows = db.prepare(
-      `SELECT * FROM products ${whereSql} ORDER BY createdAt DESC LIMIT @limit OFFSET @offset`
-    ).all({ ...params, limit: pageSizeNum, offset }) as Record<string, unknown>[];
+    const rows = await db.query(
+      `SELECT * FROM products ${whereSql} ORDER BY "createdAt" DESC LIMIT @limit OFFSET @offset`,
+      { ...params, limit: pageSizeNum, offset },
+    );
 
     const items: Product[] = rows.map(rowToProduct);
 
@@ -106,11 +126,24 @@ productsRouter.get('/', (req, res) => {
   }
 });
 
+// GET /api/products/brands — 品牌列表（必须在 /:id 之前）
+productsRouter.get('/brands', async (_req, res) => {
+  try {
+    const rows = await db.query(
+      'SELECT DISTINCT brand FROM products WHERE brand IS NOT NULL AND brand != \'\' ORDER BY brand',
+    );
+    const brands = (rows as Array<{ brand: string }>).map((r: { brand: string }) => r.brand);
+    success(res, brands);
+  } catch (err) {
+    serverError(res, err);
+  }
+});
+
 // GET /api/products/:id — 详情
-productsRouter.get('/:id', (req, res) => {
+productsRouter.get('/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const row = db.prepare('SELECT * FROM products WHERE id = ?').get(id) as Record<string, unknown> | undefined;
+    const row = await db.get('SELECT * FROM products WHERE id = @id', { id });
     if (!row) {
       fail(res, '产品不存在', 404);
       return;
@@ -122,7 +155,7 @@ productsRouter.get('/:id', (req, res) => {
 });
 
 // POST /api/products — 创建
-productsRouter.post('/', (req, res) => {
+productsRouter.post('/', async (req, res) => {
   try {
     const body = req.body as Partial<Product> & { category?: ProductCategory };
     if (!body.category) {
@@ -133,10 +166,10 @@ productsRouter.post('/', (req, res) => {
     const now = new Date().toISOString();
     const id = randomUUID();
 
-    const realImages = body.realImages ? JSON.stringify(body.realImages) : '[]';
-    const realVideos = body.realVideos ? JSON.stringify(body.realVideos) : '[]';
+    const realImages = toJsonArray(body.realImages);
+    const realVideos = toJsonArray(body.realVideos);
 
-    db.prepare(`
+    await db.run(`
       INSERT INTO products (
         id, category, brand, name, model, whiteBgImage, launchYear, isOnSale,
         dailyPrice, referencePrice, flux, waterFlowRate, faucet, dimensions,
@@ -152,7 +185,7 @@ productsRouter.post('/', (req, res) => {
         @heatingElement, @heatingCapacity, @tempControl, @hasWaterTank,
         @isAutomatic, @createdAt, @updatedAt
       )
-    `).run({
+    `, {
       id,
       category: body.category,
       brand: body.brand ?? null,
@@ -184,20 +217,20 @@ productsRouter.post('/', (req, res) => {
       updatedAt: now,
     });
 
-    const row = db.prepare('SELECT * FROM products WHERE id = ?').get(id) as Record<string, unknown>;
-    success(res, rowToProduct(row), '创建成功');
+    const row = await db.get('SELECT * FROM products WHERE id = @id', { id });
+    success(res, row ? rowToProduct(row) : null, '创建成功');
   } catch (err) {
     serverError(res, err);
   }
 });
 
 // PATCH /api/products/:id — 更新
-productsRouter.patch('/:id', (req, res) => {
+productsRouter.patch('/:id', async (req, res) => {
   try {
     const { id } = req.params;
     const body = req.body as Partial<Product>;
 
-    const existing = db.prepare('SELECT id FROM products WHERE id = ?').get(id);
+    const existing = await db.get('SELECT id FROM products WHERE id = @id', { id });
     if (!existing) {
       fail(res, '产品不存在', 404);
       return;
@@ -220,26 +253,26 @@ productsRouter.patch('/:id', (req, res) => {
 
     for (const f of textFields) {
       if (body[f] !== undefined) {
-        sets.push(`${f} = @${f}`);
+        sets.push(`"${f}" = @${f}`);
         params[f] = body[f];
       }
     }
     for (const f of numFields) {
       if (body[f] !== undefined) {
-        sets.push(`${f} = @${f}`);
+        sets.push(`"${f}" = @${f}`);
         params[f] = body[f];
       }
     }
     for (const f of boolFields) {
       if (body[f] !== undefined) {
-        sets.push(`${f} = @${f}`);
+        sets.push(`"${f}" = @${f}`);
         params[f] = body[f] ? 1 : 0;
       }
     }
     for (const f of jsonFields) {
       if (body[f] !== undefined) {
-        sets.push(`${f} = @${f}`);
-        params[f] = JSON.stringify(body[f]);
+        sets.push(`"${f}" = @${f}`);
+        params[f] = toJsonArray(body[f] as string[]);
       }
     }
 
@@ -248,24 +281,24 @@ productsRouter.patch('/:id', (req, res) => {
       return;
     }
 
-    sets.push('updatedAt = @updatedAt');
+    sets.push('"updatedAt" = @updatedAt');
     params.updatedAt = new Date().toISOString();
 
     const sql = `UPDATE products SET ${sets.join(', ')} WHERE id = @id`;
-    db.prepare(sql).run(params);
+    await db.run(sql, params);
 
-    const row = db.prepare('SELECT * FROM products WHERE id = ?').get(id) as Record<string, unknown>;
-    success(res, rowToProduct(row), '更新成功');
+    const row = await db.get('SELECT * FROM products WHERE id = @id', { id });
+    success(res, row ? rowToProduct(row) : null, '更新成功');
   } catch (err) {
     serverError(res, err);
   }
 });
 
 // DELETE /api/products/:id — 删除
-productsRouter.delete('/:id', (req, res) => {
+productsRouter.delete('/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const result = db.prepare('DELETE FROM products WHERE id = ?').run(id);
+    const result = await db.run('DELETE FROM products WHERE id = @id', { id });
     if (result.changes === 0) {
       fail(res, '产品不存在', 404);
       return;
@@ -277,7 +310,7 @@ productsRouter.delete('/:id', (req, res) => {
 });
 
 // POST /api/products/batch-delete — 批量删除
-productsRouter.post('/batch-delete', (req, res) => {
+productsRouter.post('/batch-delete', async (req, res) => {
   try {
     const { ids } = req.body as { ids: string[] };
     if (!Array.isArray(ids) || ids.length === 0) {
@@ -285,8 +318,11 @@ productsRouter.post('/batch-delete', (req, res) => {
       return;
     }
 
-    const placeholders = ids.map(() => '?').join(', ');
-    const result = db.prepare(`DELETE FROM products WHERE id IN (${placeholders})`).run(...ids);
+    const placeholders = ids.map((_: string, i: number) => `$${i + 1}`).join(', ');
+    const result = await db.run(
+      `DELETE FROM products WHERE id IN (${placeholders})`,
+      ids,
+    );
 
     success(res, { deleted: result.changes }, `成功删除 ${result.changes} 条`);
   } catch (err) {
@@ -295,7 +331,7 @@ productsRouter.post('/batch-delete', (req, res) => {
 });
 
 // POST /api/products/import — Excel 导入
-productsRouter.post('/import', upload.single('file'), (req, res) => {
+productsRouter.post('/import', upload.single('file'), async (req, res) => {
   try {
     if (!req.file) {
       fail(res, '请上传Excel文件');
@@ -331,13 +367,14 @@ productsRouter.post('/import', upload.single('file'), (req, res) => {
     const now = new Date().toISOString();
     const errors: string[] = [];
     let successCount = 0;
+    const isPg = getDbType() === 'postgres';
 
     // 默认类目：如果有类目列就用，没有就默认净水器
     const hasCategoryColumn = headers.some((h: string) =>
       h.trim() === '类目' || h.trim() === '分类' || h.trim() === 'category'
     );
 
-    const insert = db.prepare(`
+    const insertSql = `
       INSERT INTO products (
         id, category, brand, name, model, whiteBgImage, launchYear, isOnSale,
         dailyPrice, referencePrice, flux, waterFlowRate, faucet, dimensions,
@@ -353,9 +390,9 @@ productsRouter.post('/import', upload.single('file'), (req, res) => {
         @heatingElement, @heatingCapacity, @tempControl, @hasWaterTank,
         @isAutomatic, @createdAt, @updatedAt
       )
-    `);
+    `;
 
-    const importTx = db.transaction(() => {
+    await db.transaction(async () => {
       for (let i = 0; i < rows.length; i++) {
         const row = rows[i];
         try {
@@ -380,8 +417,8 @@ productsRouter.post('/import', upload.single('file'), (req, res) => {
             activatedCarbon: null,
             hasMaternityCert: 0,
             hasZeroStagnantWater: 0,
-            realImages: '[]',
-            realVideos: '[]',
+            realImages: isPg ? [] : '[]',
+            realVideos: isPg ? [] : '[]',
             heatingElement: null,
             heatingCapacity: null,
             tempControl: null,
@@ -417,7 +454,7 @@ productsRouter.post('/import', upload.single('file'), (req, res) => {
                 .split(/[,，\n]/)
                 .map((s: string) => s.trim())
                 .filter(Boolean);
-              record[field] = JSON.stringify(arr);
+              record[field] = isPg ? arr : JSON.stringify(arr);
               continue;
             }
 
@@ -435,7 +472,7 @@ productsRouter.post('/import', upload.single('file'), (req, res) => {
             }
           }
 
-          insert.run(record);
+          await db.run(insertSql, record);
           successCount += 1;
         } catch (rowErr) {
           const msg = rowErr instanceof Error ? rowErr.message : String(rowErr);
@@ -443,8 +480,6 @@ productsRouter.post('/import', upload.single('file'), (req, res) => {
         }
       }
     });
-
-    importTx();
 
     success(res, {
       total: rows.length,

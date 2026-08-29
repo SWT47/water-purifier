@@ -6,23 +6,36 @@ export type ProductCategory =
   | 'central_purifier'
   | 'central_softener'
 
-export interface ProductParams {
-  [key: string]: string | number | boolean | undefined
-}
-
 export interface Product {
   id: string
   category: ProductCategory
   brand: string
   name: string
   model: string
-  imageUrl: string
-  referencePrice: number
-  params: ProductParams
+  whiteBgImage: string
+  launchYear?: string
+  isOnSale: boolean
+  dailyPrice?: number
+  referencePrice?: number
+  flux?: string
+  waterFlowRate?: string
+  faucet?: string
+  dimensions?: string
+  waterMode?: string
+  roMembraneBrand?: string
+  filterTotalCost?: number
+  activatedCarbon?: string
+  hasMaternityCert?: boolean
+  hasZeroStagnantWater?: boolean
   realImages: string[]
-  realVideoUrl?: string
-  description?: string
+  realVideos: string[]
+  heatingElement?: string
+  heatingCapacity?: string
+  tempControl?: string
+  hasWaterTank?: boolean
+  isAutomatic?: boolean
   createdAt: string
+  updatedAt?: string
 }
 
 export interface ProductListResponse {
@@ -43,15 +56,22 @@ export interface ProductListQuery {
 export interface ComboScheme {
   id: string
   name: string
-  products: string[]
-  comboPrice: number
-  originalPrice: number
+  productIds: string[]
+  livePrice: number
+  createdAt: string
 }
 
 export interface TDSCityData {
   province: string
   city: string
   tds: number
+}
+
+export interface TDSLevelInfo {
+  level: string
+  color: string
+  bgColor: string
+  description: string
 }
 
 export type TDSLevel = '极软水' | '软水' | '中等硬水' | '硬水' | '极硬水'

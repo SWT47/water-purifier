@@ -1,5 +1,5 @@
 import type { Product } from '@/types'
-import { CORE_PARAMS, getCategoryLabel } from '@/utils/categories'
+import { getCategoryLabel } from '@/utils/categories'
 import Badge from '@/components/ui/badge'
 
 interface ProductTableProps {
@@ -29,7 +29,8 @@ export default function ProductTable({
   const startIdx = total === 0 ? 0 : (page - 1) * pageSize + 1
   const endIdx = Math.min(page * pageSize, total)
 
-  const formatPrice = (price: number): string => {
+  const formatPrice = (price: number | undefined | null): string => {
+    if (price === undefined || price === null) return '-'
     return price.toLocaleString('zh-CN')
   }
 
@@ -59,15 +60,14 @@ export default function ProductTable({
     return pages
   }
 
+  const colCount = 7
+
   return (
     <div className="bg-white rounded-[6px] shadow-[0_1px_3px_rgba(0,0,0,0.06)] border border-[#E5E7EB] overflow-hidden">
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="bg-black text-white">
             <tr>
-              <th className="text-left px-4 py-3 font-medium text-[13px] whitespace-nowrap w-16">
-                图片
-              </th>
               <th className="text-left px-4 py-3 font-medium text-[13px] whitespace-nowrap">
                 类目
               </th>
@@ -81,10 +81,13 @@ export default function ProductTable({
                 型号
               </th>
               <th className="text-left px-4 py-3 font-medium text-[13px] whitespace-nowrap">
-                核心参数
+                通量
               </th>
-              <th className="text-right px-4 py-3 font-medium text-[13px] whitespace-nowrap w-28">
+              <th className="text-right px-4 py-3 font-medium text-[13px] whitespace-nowrap w-32">
                 参考价
+              </th>
+              <th className="text-center px-4 py-3 font-medium text-[13px] whitespace-nowrap w-24">
+                操作
               </th>
             </tr>
           </thead>
@@ -92,7 +95,7 @@ export default function ProductTable({
             {loading ? (
               <tr>
                 <td
-                  colSpan={7}
+                  colSpan={colCount}
                   className="text-center py-12 text-gray-400"
                 >
                   加载中...
@@ -101,71 +104,64 @@ export default function ProductTable({
             ) : products.length === 0 ? (
               <tr>
                 <td
-                  colSpan={7}
+                  colSpan={colCount}
                   className="text-center py-12 text-gray-400"
                 >
                   暂无数据
                 </td>
               </tr>
             ) : (
-              products.map((product: Product) => {
-                const coreParams = CORE_PARAMS[product.category] || []
-                const paramSummary = coreParams
-                  .slice(0, 3)
-                  .map(
-                    (key: string) =>
-                      `${key}：${
-                        product.params[key] !== undefined
-                          ? typeof product.params[key] === 'boolean'
-                            ? (product.params[key] ? '是' : '否')
-                            : product.params[key]
-                          : '-'
-                      }`,
-                  )
-                  .join(' ｜ ')
-
-                return (
-                  <tr
-                    key={product.id}
-                    onClick={() => onRowClick(product)}
-                    className="border-t border-[#E5E7EB] hover:bg-gray-50 cursor-pointer transition-colors group"
+              products.map((product: Product) => (
+                <tr
+                  key={product.id}
+                  onClick={() => onRowClick(product)}
+                  className="border-t border-[#E5E7EB] hover:bg-gray-50 cursor-pointer transition-colors group"
+                >
+                  <td className="px-4 py-3">
+                    <Badge variant="outline">
+                      {getCategoryLabel(product.category)}
+                    </Badge>
+                  </td>
+                  <td className="px-4 py-3 text-gray-700 whitespace-nowrap">
+                    {product.brand}
+                  </td>
+                  <td className="px-4 py-3 text-gray-900 font-medium max-w-xs truncate group-hover:text-[#2563EB] transition-colors">
+                    {product.name}
+                  </td>
+                  <td className="px-4 py-3 text-gray-600 whitespace-nowrap">
+                    {product.model || '-'}
+                  </td>
+                  <td className="px-4 py-3 text-gray-600 whitespace-nowrap">
+                    {product.flux || '-'}
+                  </td>
+                  <td className="px-4 py-3 text-right">
+                    <span
+                      className={`font-semibold text-base ${
+                        product.referencePrice !== undefined
+                        && product.referencePrice !== null
+                          ? 'text-[#2563EB]'
+                          : 'text-gray-400'
+                      }`}
+                    >
+                      {product.referencePrice !== undefined
+                      && product.referencePrice !== null
+                        ? `¥${formatPrice(product.referencePrice)}`
+                        : '-'}
+                    </span>
+                  </td>
+                  <td
+                    className="px-4 py-3 text-center"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      onRowClick(product)
+                    }}
                   >
-                    <td className="px-4 py-3">
-                      <div className="w-12 h-12 bg-gray-50 rounded-[6px] overflow-hidden">
-                        <img
-                          src={product.imageUrl}
-                          alt={product.name}
-                          className="w-full h-full object-contain p-1"
-                        />
-                      </div>
-                    </td>
-                    <td className="px-4 py-3">
-                      <Badge variant="outline">
-                        {getCategoryLabel(product.category)}
-                      </Badge>
-                    </td>
-                    <td className="px-4 py-3 text-gray-700 whitespace-nowrap">
-                      {product.brand}
-                    </td>
-                    <td className="px-4 py-3 text-gray-900 font-medium max-w-xs truncate group-hover:text-[#2563EB] transition-colors">
-                      {product.name}
-                    </td>
-                    <td className="px-4 py-3 text-gray-600 whitespace-nowrap">
-                      {product.model || '-'}
-                    </td>
-                    <td className="px-4 py-3 text-gray-500 text-xs max-w-md">
-                      <div className="truncate" title={paramSummary}>
-                        {paramSummary || '-'}
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      <span className="text-[#2563EB] font-semibold text-base">
-                        ¥{formatPrice(product.referencePrice)}
-                      </span>
-                    </td>
-                  </tr>
-                )
-              })
+                    <span className="text-[#2563EB] text-sm hover:underline">
+                      查看详情
+                    </span>
+                  </td>
+                </tr>
+              ))
             )}
           </tbody>
         </table>

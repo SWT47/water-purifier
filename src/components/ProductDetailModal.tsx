@@ -1,6 +1,11 @@
 import { useState } from 'react'
-import type { Product, ProductCategory } from '@/types'
-import { CORE_PARAMS, getCategoryLabel, CATEGORY_LABEL_MAP } from '@/utils/categories'
+import type { Product } from '@/types'
+import {
+  ALL_PARAM_GROUPS,
+  getCategoryLabel,
+  formatProductValue,
+} from '@/utils/categories'
+import type { CoreParamDef } from '@/utils/categories'
 import Dialog from './ui/dialog'
 import Badge from './ui/badge'
 import AlertDialog from './ui/alert-dialog'
@@ -12,66 +17,33 @@ interface ProductDetailModalProps {
   onClose: () => void
 }
 
-const PARAM_GROUPS: Record<string, string[]> = {
-  '基础信息': ['品牌', '型号', '类目'],
-  '核心参数': [],
-  '过滤系统': ['RO膜品牌', '滤芯年成本', '0陈水', '过滤精度'],
-  '性能指标': ['通量', '出水速度', '制热能力', '控温方式', '全自动冲洗'],
-  '其他参数': ['额定功率', '外形尺寸', '适用水压', '产品重量'],
-}
+function groupParams(
+  product: Product,
+): Record<string, Array<{ label: string; value: string }>> {
+  const result: Record<string, Array<{ label: string; value: string }>> = {}
 
-function getAllParamKeys(category: ProductCategory): string[] {
-  const coreKeys = CORE_PARAMS[category] || []
-  const otherKeys = Object.values(PARAM_GROUPS).flat()
-  return Array.from(new Set([...coreKeys, ...otherKeys]))
-}
-
-function groupParams(product: Product): Record<string, Array<{ key: string; value: string }>> {
-  const result: Record<string, Array<{ key: string; value: string }>> = {}
-  const usedKeys = new Set<string>()
-  const allKeys = Object.keys(product.params)
-
-  const formatValue = (value: unknown): string => {
-    if (value === undefined || value === null) return '-'
-    if (typeof value === 'boolean') return value ? '支持' : '不支持'
-    return String(value)
-  }
-
-  // 核心参数组
-  const coreKeys = CORE_PARAMS[product.category] || []
-  if (coreKeys.length > 0) {
-    result['核心参数'] = coreKeys
-      .filter((k: string) => allKeys.includes(k))
-      .map((k: string) => {
-        usedKeys.add(k)
-        return { key: k, value: formatValue(product.params[k]) }
+  for (const [groupName, paramDefs] of Object.entries(ALL_PARAM_GROUPS)) {
+    const filtered = paramDefs
+      .map((def: CoreParamDef) => {
+        const rawValue = (product as unknown as Record<string, unknown>)[def.key]
+        if (
+          rawValue === undefined
+          || rawValue === null
+          || rawValue === ''
+        ) {
+          return null
+        }
+        const formatted = def.format
+          ? def.format(rawValue)
+          : formatProductValue(rawValue)
+        return { label: def.label, value: formatted }
       })
-  }
+      .filter(
+        (item): item is { label: string; value: string } => item !== null,
+      )
 
-  // 其他分组
-  for (const [groupName, keys] of Object.entries(PARAM_GROUPS)) {
-    if (groupName === '核心参数') continue
-    if (keys.length === 0) continue
-    const groupParams = keys
-      .filter((k: string) => allKeys.includes(k) && !usedKeys.has(k))
-      .map((k: string) => {
-        usedKeys.add(k)
-        return { key: k, value: formatValue(product.params[k]) }
-      })
-    if (groupParams.length > 0) {
-      result[groupName] = groupParams
-    }
-  }
-
-  // 剩余参数归为其他
-  const remaining = allKeys
-    .filter((k: string) => !usedKeys.has(k) && k !== '')
-    .map((k: string) => ({ key: k, value: formatValue(product.params[k]) }))
-  if (remaining.length > 0) {
-    if (result['其他参数']) {
-      result['其他参数'] = [...result['其他参数'], ...remaining]
-    } else {
-      result['其他参数'] = remaining
+    if (filtered.length > 0) {
+      result[groupName] = filtered
     }
   }
 
@@ -89,18 +61,41 @@ export default function ProductDetailModal({
   if (!product) return null
 
   const paramGroups = groupParams(product)
-  const realImages = product.realImages && product.realImages.length > 0
-    ? product.realImages
-    : [product.imageUrl]
+
+  const mainImage = product.whiteBgImage
+    || `https://picsum.photos/seed/${product.id}/600/600`
+
+  const realImages =
+    product.realImages && product.realImages.length > 0
+      ? product.realImages
+      : [mainImage]
+
+  const firstVideo =
+    product.realVideos && product.realVideos.length > 0
+      ? product.realVideos[0]
+      : ''
 
   const handleImageClick = (imgUrl: string) => {
     setCurrentImage(imgUrl)
     setImageViewerOpen(true)
   }
 
-  const formatPrice = (price: number): string => {
+  const formatPrice = (price: number | undefined | null): string => {
+    if (price === undefined || price === null) return '-'
     return price.toLocaleString('zh-CN')
   }
+
+  const buildDescription = (): string => {
+    const parts: string[] = []
+    if (product.model) parts.push(`型号：${product.model}`)
+    if (product.launchYear) parts.push(`${product.launchYear}年上市`)
+    if (product.brand) parts.push(`${product.brand}出品`)
+    if (product.waterMode) parts.push(product.waterMode)
+    if (product.flux) parts.push(`通量${product.flux}`)
+    return parts.join(' · ')
+  }
+
+  const description = buildDescription()
 
   return (
     <>
@@ -116,7 +111,7 @@ export default function ProductDetailModal({
             <div className="w-full lg:w-2/5 flex-shrink-0">
               <div className="aspect-square bg-gray-50 rounded-[6px] overflow-hidden border border-[#E5E7EB]">
                 <img
-                  src={product.imageUrl}
+                  src={mainImage}
                   alt={product.name}
                   className="w-full h-full object-contain p-4"
                 />
@@ -150,15 +145,18 @@ export default function ProductDetailModal({
               )}
 
               {/* 实拍视频 */}
-              {product.realVideoUrl && (
+              {firstVideo && (
                 <div className="mt-4">
                   <div className="text-sm font-medium text-gray-800 mb-2 flex items-center gap-1.5">
                     <Play size={14} />
                     <span>实拍视频</span>
+                    <span className="text-xs text-gray-400">
+                      （共{product.realVideos.length}个）
+                    </span>
                   </div>
                   <div className="aspect-video bg-black rounded-[6px] overflow-hidden">
                     <video
-                      src={product.realVideoUrl}
+                      src={firstVideo}
                       controls
                       className="w-full h-full object-contain"
                       preload="metadata"
@@ -179,24 +177,40 @@ export default function ProductDetailModal({
                     {product.name}
                   </h2>
                   <p className="text-sm text-gray-500 mt-1">
-                    {product.brand} · {product.model || '型号待定'}
+                    {product.brand || '-'} · {product.model || '型号待定'}
                   </p>
                 </div>
               </div>
 
               {/* 价格 */}
               <div className="bg-blue-50 rounded-[6px] p-4 mb-4 border border-blue-100">
-                <div className="text-xs text-gray-500 mb-1">参考价格</div>
-                <div className="text-3xl font-bold text-[#2563EB]">
-                  ¥{formatPrice(product.referencePrice)}
+                <div className="flex items-baseline gap-4">
+                  <div>
+                    <div className="text-xs text-gray-500 mb-1">参考价格</div>
+                    <div className="text-3xl font-bold text-[#2563EB]">
+                      {product.referencePrice !== undefined
+                      && product.referencePrice !== null
+                        ? `¥${formatPrice(product.referencePrice)}`
+                        : '价格待定'}
+                    </div>
+                  </div>
+                  {(product.dailyPrice !== undefined
+                    && product.dailyPrice !== null) && (
+                    <div>
+                      <div className="text-xs text-gray-500 mb-1">日常价</div>
+                      <div className="text-lg font-semibold text-gray-500 line-through">
+                        ¥{formatPrice(product.dailyPrice)}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
 
               {/* 描述 */}
-              {product.description && (
+              {description && (
                 <div className="mb-4">
                   <p className="text-sm text-gray-600 leading-relaxed">
-                    {product.description}
+                    {description}
                   </p>
                 </div>
               )}
@@ -212,15 +226,18 @@ export default function ProductDetailModal({
                       </span>
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-2 gap-x-4 bg-gray-50 rounded-[6px] p-3">
-                      {params.map(({ key, value }) => (
+                      {params.map(({ label, value }) => (
                         <div
-                          key={key}
+                          key={label}
                           className="flex items-start text-sm"
                         >
                           <span className="text-gray-500 w-24 flex-shrink-0">
-                            {key}
+                            {label}
                           </span>
-                          <ChevronRight size={14} className="text-gray-300 mt-0.5 flex-shrink-0" />
+                          <ChevronRight
+                            size={14}
+                            className="text-gray-300 mt-0.5 flex-shrink-0"
+                          />
                           <span className="text-gray-800 font-medium flex-1 break-words">
                             {value}
                           </span>

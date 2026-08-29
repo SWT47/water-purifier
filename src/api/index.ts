@@ -1,4 +1,4 @@
-import type { ProductListQuery, ProductListResponse, Product } from '@/types'
+import type { Product, ProductListQuery, ProductListResponse, ComboScheme } from '@/types'
 
 const BASE_URL = '/api'
 
@@ -13,7 +13,14 @@ async function request<T>(url: string, options?: RequestInit): Promise<T> {
   if (!res.ok) {
     throw new Error(`Request failed: ${res.status}`)
   }
-  return res.json()
+  const json = await res.json()
+  if (json && typeof json === 'object' && 'success' in json) {
+    if (!json.success) {
+      throw new Error(json.message || '请求失败')
+    }
+    return json.data as T
+  }
+  return json as T
 }
 
 function buildQueryString(params: Record<string, unknown>): string {
@@ -40,6 +47,6 @@ export async function getBrands(): Promise<string[]> {
   return request<string[]>('/products/brands')
 }
 
-export async function getComboSchemes(): Promise<Product[]> {
-  return request<Product[]>('/combo-schemes')
+export async function getComboSchemes(): Promise<ComboScheme[]> {
+  return request<ComboScheme[]>('/combo-schemes')
 }

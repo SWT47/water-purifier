@@ -6,9 +6,7 @@ import fs from 'node:fs';
 import { productsRouter } from './api/products.js';
 import { comboRouter } from './api/combo.js';
 import { fail } from './utils/response.js';
-
-// 初始化数据库（副作用导入）
-import './db/index.js';
+import { initDb, getDbType } from './db/index.js';
 
 // dist/server.cjs 与 dist/assets、dist/index.html 同级
 const distDir = path.resolve(process.cwd(), 'dist');
@@ -54,7 +52,18 @@ if (fs.existsSync(clientDistPath)) {
   });
 }
 
-app.listen(PORT, () => {
-  // eslint-disable-next-line no-console
-  console.log(`🚀 净水器直播展示系统服务已启动: http://localhost:${PORT}`);
-});
+// 等数据库初始化完成后再启动服务
+initDb()
+  .then(() => {
+    app.listen(PORT, () => {
+      // eslint-disable-next-line no-console
+      console.log(
+        `🚀 净水器直播展示系统服务已启动: http://localhost:${PORT} (数据库: ${getDbType()})`
+      );
+    });
+  })
+  .catch((err: Error) => {
+    // eslint-disable-next-line no-console
+    console.error('服务启动失败:', err);
+    process.exit(1);
+  });
