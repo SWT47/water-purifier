@@ -185,10 +185,16 @@ async function createPostgresDb(): Promise<DbAdapter> {
     min: 0,
     max: 10,
     idleTimeoutMillis: 30000,
+    connectionTimeoutMillis: 8000,
   });
 
-  // 测试连接
-  await pool.query('SELECT 1');
+  // 测试连接（失败直接抛错，由调用方决定是否降级）
+  const client = await pool.connect();
+  try {
+    await client.query('SELECT 1');
+  } finally {
+    client.release();
+  }
 
   return new PostgresAdapter(pool);
 }
@@ -539,25 +545,59 @@ async function seedIfEmpty(): Promise<void> {
 // 公开 API
 // ============================================================
 let initPromise: Promise<void> | null = null;
+let initError: Error | null = null;
 
 export async function initDb(): Promise<void> {
   if (initPromise) return initPromise;
 
   initPromise = (async () => {
-    if (process.env.DATABASE_URL) {
-      _dbType = 'postgres';
-      _db = await createPostgresDb();
-      await _db.exec(POSTGRES_SCHEMA);
-    } else {
-      _dbType = 'sqlite';
-      _db = await createSqliteDb();
-      await _db.exec(SQLITE_SCHEMA);
+    const databaseUrl = process.env.DATABASE_URL;
+    let triedPg = false;
+
+    // 1) 优先尝试 PostgreSQL
+    if (databaseUrl) {
+      triedPg = true;
+      try {
+        _dbType = 'postgres';
+        _db = await createPostgresDb();
+        await _db.exec(POSTGRES_SCHEMA);
+        console.log('[db] PostgreSQL 连接成功，schema 已初始化');
+      } catch (pgErr) {
+        console.warn(`[db] PostgreSQL 连接失败，降级到 SQLite: ${(pgErr as Error).message}`);
+        _db = null as unknown as DbAdapter;
+        initError = pgErr as Error;
+      }
     }
 
-    await seedIfEmpty();
+    // 2) 降级到 SQLite（PG 失败或未配置时）
+    if (!_db) {
+      try {
+        _dbType = 'sqlite';
+        _db = await createSqliteDb();
+        await _db.exec(SQLITE_SCHEMA);
+        const dbPath = process.env.DB_PATH || './data/app.db';
+        console.log(`[db] SQLite 初始化成功 (path: ${dbPath})${triedPg ? '（PG 失败降级）' : ''}`);
+      } catch (sqliteErr) {
+        console.error('[db] SQLite 也初始化失败:', (sqliteErr as Error).message);
+        initError = sqliteErr as Error;
+        throw sqliteErr;
+      }
+    }
+
+    // 3) Seed 数据（失败不阻断启动）
+    try {
+      await seedIfEmpty();
+      console.log('[db] Seed 数据检查完成');
+    } catch (seedErr) {
+      console.warn('[db] Seed 数据写入失败:', (seedErr as Error).message);
+    }
   })();
 
   return initPromise;
+}
+
+export function getDbInitError(): Error | null {
+  return initError;
 }
 
 export function getDbType(): DbType {
@@ -578,8 +618,7 @@ export const db: DbAdapter = new Proxy<DbAdapter>({} as DbAdapter, {
 });
 
 // 立即初始化（兼容 server.ts 中副作用导入的用法）
+// 注意：不再 process.exit，失败由 server.ts 决定是否降级启动
 initDb().catch((err: Error) => {
-  // eslint-disable-next-line no-console
-  console.error('数据库初始化失败:', err);
-  process.exit(1);
+  console.error('数据库初始化失败（服务仍将尝试以降级模式启动）:', err.message);
 });
