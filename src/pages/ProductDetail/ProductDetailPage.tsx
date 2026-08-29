@@ -33,7 +33,7 @@ import {
   DialogContent,
   DialogClose,
 } from '@/components/ui/Dialog';
-import { groupFields, type FieldGroup, renderFieldValue, cn } from './detail-helpers';
+import { groupFields, type FieldGroup, renderFieldValue, cn, isHighlightField } from './detail-helpers';
 
 const ProductDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -317,57 +317,108 @@ const ProductDetailPage: React.FC = () => {
 
         {/* 参数分组卡片 */}
         {fieldGroups.length > 0 && (
-          <div className="bg-white rounded-md border border-gray-200 shadow-sm overflow-hidden">
-            <div className="px-6 py-4 border-b border-gray-100">
-              <h2 className="text-base font-semibold text-gray-900">
+          <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
+            <div className="px-6 py-4 border-b border-gray-100 bg-gradient-to-r from-gray-50 to-white">
+              <h2 className="text-base font-bold text-gray-900">
                 产品参数
               </h2>
+              <p className="text-xs text-gray-500 mt-0.5">
+                按类别分组展示，核心参数重点标注
+              </p>
             </div>
-            <div className="p-6 space-y-6">
-              {fieldGroups.map((group: FieldGroup) => (
-                <div
-                  key={group.key}
-                  className="bg-gray-50/50 rounded-md border border-gray-100 p-4"
-                >
-                  <div className="flex items-center gap-2 mb-3">
-                    <span className="w-6 h-6 rounded bg-blue-100 text-blue-600 flex items-center justify-center">
-                      {group.icon}
-                    </span>
-                    <h3 className="text-sm font-semibold text-gray-900">
-                      {group.label}
-                    </h3>
-                    <span className="text-xs text-gray-400 ml-auto">
-                      {group.fields.length} 项
-                    </span>
-                  </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2">
-                    {group.fields.map((field: CategoryFieldConfig) => {
-                      const key = String(field.key);
-                      const value = product[key as keyof Product];
-                      const isPrice = PRICE_KEYS.has(key);
+            <div className="p-5 space-y-5">
+              {fieldGroups.map((group: FieldGroup) => {
+                const highlightFields = group.fields.filter(
+                  (f: CategoryFieldConfig) => isHighlightField(f),
+                );
+                const normalFields = group.fields.filter(
+                  (f: CategoryFieldConfig) => !isHighlightField(f),
+                );
 
-                      return (
-                        <div
-                          key={key}
-                          className="flex items-baseline py-1.5 border-b border-gray-100 last:border-b-0"
-                        >
-                          <div className="text-xs text-gray-500 w-24 flex-shrink-0">
-                            {field.label}
-                          </div>
-                          <div
-                            className={cn(
-                              'text-sm font-medium min-w-0 flex-1',
-                              isPrice ? 'text-blue-600' : 'text-gray-800',
-                            )}
-                          >
-                            {renderFieldValue(field, value)}
-                          </div>
+                return (
+                  <div key={group.key} className="rounded-lg overflow-hidden border border-gray-100">
+                    {/* 分组标题栏 */}
+                    <div className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-gray-50 to-gray-100/50 border-b border-gray-100">
+                      <div className="w-0.5 h-4 bg-black rounded-full" />
+                      <span className="w-5 h-5 rounded bg-white text-gray-700 flex items-center justify-center shadow-sm">
+                        {group.icon}
+                      </span>
+                      <h3 className="text-sm font-bold text-gray-900">
+                        {group.label}
+                      </h3>
+                      <span className="ml-auto text-[11px] text-gray-400 bg-white px-2 py-0.5 rounded-full border border-gray-200">
+                        {group.fields.length} 项
+                      </span>
+                    </div>
+
+                    {/* 核心高亮参数（如果有） */}
+                    {highlightFields.length > 0 && (
+                      <div className="px-4 py-3 bg-gradient-to-r from-blue-50/80 to-indigo-50/40 border-b border-blue-100/50">
+                        <div className="text-[11px] text-blue-600 font-medium mb-2 flex items-center gap-1">
+                          <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+                          重点参数
                         </div>
-                      );
-                    })}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          {highlightFields.map((field: CategoryFieldConfig) => {
+                            const key = String(field.key);
+                            const value = product[key as keyof Product];
+                            const isPrice = PRICE_KEYS.has(key);
+
+                            return (
+                              <div
+                                key={key}
+                                className="bg-white/80 backdrop-blur-sm rounded-md px-3 py-2.5 border border-blue-100/80 shadow-sm"
+                              >
+                                <div className="text-[11px] text-gray-500 mb-1">
+                                  {field.label}
+                                </div>
+                                <div
+                                  className={cn(
+                                    'text-base font-bold leading-tight',
+                                    isPrice ? 'text-blue-600' : 'text-gray-900',
+                                  )}
+                                >
+                                  {renderFieldValue(field, value)}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* 普通参数 */}
+                    {normalFields.length > 0 && (
+                      <div className="p-4 grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-3 bg-white">
+                        {normalFields.map((field: CategoryFieldConfig) => {
+                          const key = String(field.key);
+                          const value = product[key as keyof Product];
+                          const isPrice = PRICE_KEYS.has(key);
+
+                          return (
+                            <div
+                              key={key}
+                              className="flex items-start gap-3 py-1.5 border-b border-gray-50 last:border-b-0"
+                            >
+                              <div className="text-xs text-gray-400 w-20 flex-shrink-0 pt-0.5">
+                                {field.label}
+                              </div>
+                              <div
+                                className={cn(
+                                  'text-sm font-semibold flex-1 leading-tight',
+                                  isPrice ? 'text-blue-600' : 'text-gray-800',
+                                )}
+                              >
+                                {renderFieldValue(field, value)}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         )}

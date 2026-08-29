@@ -14,11 +14,6 @@ import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/Label';
 import { Switch } from '@/components/ui/Switch';
 import {
-  ImageUpload,
-  MultiImageUpload,
-  VideoUpload,
-} from '@/components/FileUpload';
-import {
   CATEGORY_FIELDS,
   CATEGORY_LABELS,
   type Product,
@@ -79,9 +74,11 @@ const getDefaultValues = (
   for (const field of fields) {
     const key = String(field.key);
     if (product) {
-      const val = product[field.key];
+      const val = product[field.key as keyof Product];
       if (field.type === 'images' || field.type === 'videos') {
-        defaults[key] = Array.isArray(val) ? val : [];
+        defaults[key] = Array.isArray(val) && val.length > 0
+          ? (val as string[]).join('\n')
+          : '';
       } else if (field.type === 'boolean') {
         defaults[key] = Boolean(val);
       } else if (val === null || val === undefined) {
@@ -127,8 +124,8 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
     setValue,
     watch,
     formState: { errors },
-  } = useForm<z.infer<typeof schema>>({
-    resolver: zodResolver(schema),
+  } = useForm<Record<string, unknown>>({
+    resolver: zodResolver(schema) as any,
     defaultValues,
   });
 
@@ -140,10 +137,40 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
   }, [open, product, category, fields, reset]);
 
   const handleFormSubmit = async (values: Record<string, unknown>) => {
+    const processed: Record<string, unknown> = { ...values };
+
+    for (const field of fields) {
+      const key = String(field.key);
+      if (field.type === 'image') {
+        const val = processed[key];
+        processed[key] =
+          val === '' || val === null || val === undefined ? null : String(val);
+      } else if (field.type === 'images' || field.type === 'videos') {
+        const val = processed[key];
+        if (Array.isArray(val)) {
+          processed[key] = val.filter((v: unknown) => Boolean(v));
+        } else if (typeof val === 'string') {
+          processed[key] = val
+            .split(/[,，\n\r;；]/)
+            .map((s: string) => s.trim())
+            .filter(Boolean);
+        } else {
+          processed[key] = [];
+        }
+      }
+    }
+
     const data: ProductCreateInput = {
       category,
-      ...values,
+      ...processed,
     } as unknown as ProductCreateInput;
+
+    console.log('[ProductForm] 提交数据:', JSON.stringify({
+      whiteBgImage: data.whiteBgImage,
+      realImages: (data as any).realImages,
+      realVideos: (data as any).realVideos,
+    }));
+
     await onSubmit(data);
   };
 
@@ -176,25 +203,29 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
     }
 
     if (field.type === 'image') {
-      const value = watch(key) as string;
       return (
-        <div key={key} className="flex-1 min-w-[200px]">
+        <div key={key} className="flex-1 min-w-[280px] w-full">
           <Label className="mb-1.5 block text-sm font-medium text-gray-700">
             {field.label}
             {isRequired && (
               <span className="text-red-500 ml-0.5">*</span>
             )}
           </Label>
-          <ImageUpload
-            value={String(value || '')}
-            onChange={(url: string) => setValue(key, url)}
+          <Input
+            {...register(key)}
+            placeholder={`请输入${field.label}URL`}
+            className={cn('h-9 text-sm', error && 'border-red-500')}
           />
+          <p className="mt-1 text-[11px] text-gray-400">
+            请输入图片的完整 URL 地址（https://...）
+          </p>
         </div>
       );
     }
 
     if (field.type === 'images') {
-      const value = watch(key) as string[];
+      const val = watch(key);
+      const displayVal = Array.isArray(val) ? val.join('\n') : (val ?? '');
       return (
         <div key={key} className="flex-1 min-w-[280px] w-full">
           <Label className="mb-1.5 block text-sm font-medium text-gray-700">
@@ -203,16 +234,25 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
               <span className="text-red-500 ml-0.5">*</span>
             )}
           </Label>
-          <MultiImageUpload
-            value={Array.isArray(value) ? value : []}
-            onChange={(urls: string[]) => setValue(key, urls)}
+          <textarea
+            {...register(key)}
+            placeholder={`每行一个图片URL，或用逗号分隔\nhttps://xxx.com/1.jpg\nhttps://xxx.com/2.jpg`}
+            className="w-full min-h-[90px] px-3 py-2 text-sm rounded-md border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none resize-y"
+            value={displayVal as string}
+            onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => {
+              setValue(key, e.target.value);
+            }}
           />
+          <p className="mt-1 text-[11px] text-gray-400">
+            每行一个 URL，或用逗号/分号分隔
+          </p>
         </div>
       );
     }
 
     if (field.type === 'videos') {
-      const value = watch(key) as string[];
+      const val = watch(key);
+      const displayVal = Array.isArray(val) ? val.join('\n') : (val ?? '');
       return (
         <div key={key} className="flex-1 min-w-[280px] w-full">
           <Label className="mb-1.5 block text-sm font-medium text-gray-700">
@@ -221,10 +261,18 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
               <span className="text-red-500 ml-0.5">*</span>
             )}
           </Label>
-          <VideoUpload
-            value={Array.isArray(value) ? value : []}
-            onChange={(urls: string[]) => setValue(key, urls)}
+          <textarea
+            {...register(key)}
+            placeholder={`每行一个视频URL，或用逗号分隔\nhttps://xxx.com/1.mp4`}
+            className="w-full min-h-[80px] px-3 py-2 text-sm rounded-md border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none resize-y"
+            value={displayVal as string}
+            onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => {
+              setValue(key, e.target.value);
+            }}
           />
+          <p className="mt-1 text-[11px] text-gray-400">
+            每行一个 URL，或用逗号/分号分隔
+          </p>
         </div>
       );
     }
