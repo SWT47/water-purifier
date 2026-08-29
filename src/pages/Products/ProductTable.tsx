@@ -157,7 +157,7 @@ const ProductTable: React.FC<ProductTableProps> = ({
                   {field.label}
                 </th>
               ))}
-              <th className="px-3 py-2.5 bg-black text-white text-[13px] font-medium text-left sticky right-0 w-[160px]">
+              <th className="px-3 py-2.5 bg-black text-white text-[13px] font-medium text-left sticky right-0 w-[160px] border-l border-gray-700 shadow-[-4px_0_8px_-6px_rgba(0,0,0,0.1)] before:absolute before:inset-0 before:bg-black before:-z-10">
                 操作
               </th>
             </tr>
@@ -226,7 +226,13 @@ const ProductTable: React.FC<ProductTableProps> = ({
                       </td>
                     ))}
                     <td
-                      className="px-3 py-2.5 sticky right-0 bg-inherit"
+                      className={cn(
+                        'px-3 py-2.5 sticky right-0 border-l border-gray-100',
+                        'shadow-[-4px_0_8px_-6px_rgba(0,0,0,0.08)]',
+                        isSelected
+                          ? 'bg-blue-50/60 group-hover:bg-blue-50/60'
+                          : 'bg-white group-hover:bg-gray-50',
+                      )}
                       onClick={(e: React.MouseEvent) => e.stopPropagation()}
                     >
                       <div className="flex items-center gap-1">
