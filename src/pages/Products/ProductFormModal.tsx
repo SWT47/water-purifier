@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/Label';
 import { Switch } from '@/components/ui/Switch';
+import FileUploader from '@/components/ui/FileUploader';
 import {
   CATEGORY_FIELDS,
   CATEGORY_LABELS,
@@ -76,9 +77,9 @@ const getDefaultValues = (
     if (product) {
       const val = product[field.key as keyof Product];
       if (field.type === 'images' || field.type === 'videos') {
-        defaults[key] = Array.isArray(val) && val.length > 0
-          ? (val as string[]).join('\n')
-          : '';
+        defaults[key] = Array.isArray(val) ? val.filter(Boolean) : [];
+      } else if (field.type === 'image') {
+        defaults[key] = val || '';
       } else if (field.type === 'boolean') {
         defaults[key] = Boolean(val);
       } else if (val === null || val === undefined) {
@@ -149,11 +150,6 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
         const val = processed[key];
         if (Array.isArray(val)) {
           processed[key] = val.filter((v: unknown) => Boolean(v));
-        } else if (typeof val === 'string') {
-          processed[key] = val
-            .split(/[,，\n\r;；]/)
-            .map((s: string) => s.trim())
-            .filter(Boolean);
         } else {
           processed[key] = [];
         }
@@ -203,76 +199,61 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
     }
 
     if (field.type === 'image') {
+      const val = watch(key) as string | undefined;
+      const urls = val ? [val] : [];
       return (
         <div key={key} className="flex-1 min-w-[280px] w-full">
-          <Label className="mb-1.5 block text-sm font-medium text-gray-700">
-            {field.label}
-            {isRequired && (
-              <span className="text-red-500 ml-0.5">*</span>
-            )}
-          </Label>
-          <Input
-            {...register(key)}
-            placeholder={`请输入${field.label}URL`}
-            className={cn('h-9 text-sm', error && 'border-red-500')}
+          <FileUploader
+            type="image"
+            label={field.label}
+            value={urls}
+            maxCount={1}
+            multiple={false}
+            description="点击上传白底图，支持 JPG/PNG/WebP"
+            onChange={(newUrls: string[]) => {
+              setValue(key, newUrls[0] || '', { shouldDirty: true });
+            }}
           />
-          <p className="mt-1 text-[11px] text-gray-400">
-            请输入图片的完整 URL 地址（https://...）
-          </p>
         </div>
       );
     }
 
     if (field.type === 'images') {
-      const val = watch(key);
-      const displayVal = Array.isArray(val) ? val.join('\n') : (val ?? '');
+      const val = watch(key) as string[] | undefined;
+      const urls = Array.isArray(val) ? val : [];
       return (
         <div key={key} className="flex-1 min-w-[280px] w-full">
-          <Label className="mb-1.5 block text-sm font-medium text-gray-700">
-            {field.label}
-            {isRequired && (
-              <span className="text-red-500 ml-0.5">*</span>
-            )}
-          </Label>
-          <textarea
-            {...register(key)}
-            placeholder={`每行一个图片URL，或用逗号分隔\nhttps://xxx.com/1.jpg\nhttps://xxx.com/2.jpg`}
-            className="w-full min-h-[90px] px-3 py-2 text-sm rounded-md border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none resize-y"
-            value={displayVal as string}
-            onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => {
-              setValue(key, e.target.value);
+          <FileUploader
+            type="image"
+            label={field.label}
+            value={urls}
+            maxCount={20}
+            multiple
+            description="点击上传实拍图，支持多选，每张不超过 50MB"
+            onChange={(newUrls: string[]) => {
+              setValue(key, newUrls, { shouldDirty: true });
             }}
           />
-          <p className="mt-1 text-[11px] text-gray-400">
-            每行一个 URL，或用逗号/分号分隔
-          </p>
         </div>
       );
     }
 
     if (field.type === 'videos') {
-      const val = watch(key);
-      const displayVal = Array.isArray(val) ? val.join('\n') : (val ?? '');
+      const val = watch(key) as string[] | undefined;
+      const urls = Array.isArray(val) ? val : [];
       return (
         <div key={key} className="flex-1 min-w-[280px] w-full">
-          <Label className="mb-1.5 block text-sm font-medium text-gray-700">
-            {field.label}
-            {isRequired && (
-              <span className="text-red-500 ml-0.5">*</span>
-            )}
-          </Label>
-          <textarea
-            {...register(key)}
-            placeholder={`每行一个视频URL，或用逗号分隔\nhttps://xxx.com/1.mp4`}
-            className="w-full min-h-[80px] px-3 py-2 text-sm rounded-md border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none resize-y"
-            value={displayVal as string}
-            onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => {
-              setValue(key, e.target.value);
+          <FileUploader
+            type="video"
+            label={field.label}
+            value={urls}
+            maxCount={10}
+            multiple
+            description="点击上传实拍视频，支持多选，每个不超过 50MB"
+            onChange={(newUrls: string[]) => {
+              setValue(key, newUrls, { shouldDirty: true });
             }}
           />
-          <p className="mt-1 text-[11px] text-gray-400">
-            每行一个 URL，或用逗号/分号分隔
-          </p>
         </div>
       );
     }

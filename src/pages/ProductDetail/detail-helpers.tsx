@@ -5,6 +5,7 @@ import {
   Settings,
   Droplets,
   ShieldCheck,
+  Sparkles,
 } from 'lucide-react';
 import type { Product, CategoryFieldConfig } from '@/types';
 import { PRICE_KEYS } from '@/utils/constants';
@@ -62,6 +63,9 @@ export function groupFields(
 
   for (const f of allFields) {
     const key = String(f.key);
+    if (f.type === 'images' || f.type === 'videos' || f.type === 'image') {
+      continue;
+    }
     if (BASE_INFO_KEYS.has(key)) {
       baseFields.push(f);
     } else if (PRICE_KEYS.has(key)) {
@@ -72,8 +76,6 @@ export function groupFields(
       filterFields.push(f);
     } else if (CERTIFICATION_KEYS.has(key)) {
       certFields.push(f);
-    } else if (f.type === 'images' || f.type === 'videos' || f.type === 'image') {
-      // skip — handled by separate sections
     } else {
       otherFields.push(f);
     }
@@ -124,7 +126,7 @@ export function groupFields(
     groups.push({
       key: 'other',
       label: '其他属性',
-      icon: <Info className="w-4 h-4" />,
+      icon: <Sparkles className="w-4 h-4" />,
       fields: otherFields,
     });
   }
@@ -139,13 +141,23 @@ const HIGHLIGHT_KEYS = new Set([
   'filterTotalCost',
 ]);
 
+const ACCENT_KEYS = new Set([
+  'heatingCapacity',
+  'roMembraneBrand',
+]);
+
 export function isHighlightField(field: CategoryFieldConfig): boolean {
   return HIGHLIGHT_KEYS.has(String(field.key));
+}
+
+export function isAccentField(field: CategoryFieldConfig): boolean {
+  return ACCENT_KEYS.has(String(field.key));
 }
 
 export function renderFieldValue(
   field: CategoryFieldConfig,
   value: unknown,
+  large: boolean = false,
 ): React.ReactNode {
   const isPrice = PRICE_KEYS.has(String(field.key));
 
@@ -160,9 +172,19 @@ export function renderFieldValue(
 
   if (field.type === 'boolean') {
     return value ? (
-      <Badge variant="success" className="text-xs px-2 py-0.5">是</Badge>
+      <Badge
+        variant="success"
+        className={large ? 'text-xs px-2.5 py-1' : 'text-[11px] px-2 py-0.5'}
+      >
+        是
+      </Badge>
     ) : (
-      <Badge variant="secondary" className="text-xs px-2 py-0.5">否</Badge>
+      <Badge
+        variant="secondary"
+        className={large ? 'text-xs px-2.5 py-1' : 'text-[11px] px-2 py-0.5'}
+      >
+        否
+      </Badge>
     );
   }
 

@@ -4,11 +4,13 @@ import express, {
   type NextFunction,
 } from 'express';
 import path from 'node:path';
+import fs from 'node:fs';
 import productsHandler from './api/products';
 import productsCompareHandler from './api/products/compare';
 import productsByIdHandler from './api/products/[id]';
 import comboSchemesHandler from './api/combo-schemes';
 import comboSchemesByIdHandler from './api/combo-schemes/[id]';
+import uploadHandler from './api/upload';
 
 const app = express();
 
@@ -45,6 +47,27 @@ app.all('/api/combo-schemes/:id', (req: Request, res: Response) => {
   (req as any).query.id = req.params.id;
   return comboSchemesByIdHandler(req as any, res as any);
 });
+
+// 文件上传
+app.all('/api/upload', (req: Request, res: Response) =>
+  uploadHandler(req as any, res as any),
+);
+
+// 本地上传文件静态服务（仅本地降级模式使用）
+const uploadDir = process.env.UPLOAD_DIR || 'uploads';
+const uploadPath = path.isAbsolute(uploadDir)
+  ? uploadDir
+  : path.join(process.cwd(), uploadDir);
+if (fs.existsSync(uploadPath)) {
+  app.use('/uploads', express.static(uploadPath));
+} else {
+  try {
+    fs.mkdirSync(uploadPath, { recursive: true });
+    app.use('/uploads', express.static(uploadPath));
+  } catch {
+    // Vercel serverless 环境只读文件系统，跳过静态目录创建
+  }
+}
 
 // ---------------------------------------------------------------
 // /openapi/*  — 匿名读接口（只读，供公开访问用）

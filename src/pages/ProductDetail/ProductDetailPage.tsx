@@ -33,7 +33,7 @@ import {
   DialogContent,
   DialogClose,
 } from '@/components/ui/Dialog';
-import { groupFields, type FieldGroup, renderFieldValue, cn, isHighlightField } from './detail-helpers';
+import { groupFields, type FieldGroup, renderFieldValue, cn, isHighlightField, isAccentField } from './detail-helpers';
 
 const ProductDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -315,28 +315,21 @@ const ProductDetailPage: React.FC = () => {
           </div>
         </div>
 
-        {/* 参数分组卡片 */}
+        {/* 参数分组卡片 - 全方框卡片样式 */}
         {fieldGroups.length > 0 && (
-          <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
+          <div className="bg-white rounded-md border border-gray-200 shadow-sm overflow-hidden">
             <div className="px-6 py-4 border-b border-gray-100 bg-gradient-to-r from-gray-50 to-white">
               <h2 className="text-base font-bold text-gray-900">
                 产品参数
               </h2>
               <p className="text-xs text-gray-500 mt-0.5">
-                按类别分组展示，核心参数重点标注
+                按类别分组展示，所有参数均以卡片方框呈现
               </p>
             </div>
             <div className="p-5 space-y-5">
               {fieldGroups.map((group: FieldGroup) => {
-                const highlightFields = group.fields.filter(
-                  (f: CategoryFieldConfig) => isHighlightField(f),
-                );
-                const normalFields = group.fields.filter(
-                  (f: CategoryFieldConfig) => !isHighlightField(f),
-                );
-
                 return (
-                  <div key={group.key} className="rounded-lg overflow-hidden border border-gray-100">
+                  <div key={group.key} className="rounded-lg overflow-hidden border border-gray-100 bg-white">
                     {/* 分组标题栏 */}
                     <div className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-gray-50 to-gray-100/50 border-b border-gray-100">
                       <div className="w-0.5 h-4 bg-black rounded-full" />
@@ -351,71 +344,56 @@ const ProductDetailPage: React.FC = () => {
                       </span>
                     </div>
 
-                    {/* 核心高亮参数（如果有） */}
-                    {highlightFields.length > 0 && (
-                      <div className="px-4 py-3 bg-gradient-to-r from-blue-50/80 to-indigo-50/40 border-b border-blue-100/50">
-                        <div className="text-[11px] text-blue-600 font-medium mb-2 flex items-center gap-1">
-                          <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
-                          重点参数
-                        </div>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                          {highlightFields.map((field: CategoryFieldConfig) => {
-                            const key = String(field.key);
-                            const value = product[key as keyof Product];
-                            const isPrice = PRICE_KEYS.has(key);
+                    {/* 全部参数卡片网格 - 每个参数一个方框 */}
+                    <div className="p-4 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                      {group.fields.map((field: CategoryFieldConfig) => {
+                        const key = String(field.key);
+                        const value = product[key as keyof Product];
+                        const isPrice = PRICE_KEYS.has(key);
+                        const isHighlight = isHighlightField(field);
+                        const isAccent = isAccentField(field);
 
-                            return (
-                              <div
-                                key={key}
-                                className="bg-white/80 backdrop-blur-sm rounded-md px-3 py-2.5 border border-blue-100/80 shadow-sm"
-                              >
-                                <div className="text-[11px] text-gray-500 mb-1">
-                                  {field.label}
-                                </div>
-                                <div
-                                  className={cn(
-                                    'text-base font-bold leading-tight',
-                                    isPrice ? 'text-blue-600' : 'text-gray-900',
-                                  )}
-                                >
-                                  {renderFieldValue(field, value)}
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    )}
+                        let cardClass = 'bg-gray-50/50 border border-gray-200';
+                        let labelClass = 'text-[11px] text-gray-500';
+                        let valueClass = 'text-sm font-bold text-gray-900';
 
-                    {/* 普通参数 */}
-                    {normalFields.length > 0 && (
-                      <div className="p-4 grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-3 bg-white">
-                        {normalFields.map((field: CategoryFieldConfig) => {
-                          const key = String(field.key);
-                          const value = product[key as keyof Product];
-                          const isPrice = PRICE_KEYS.has(key);
+                        if (isHighlight) {
+                          cardClass = 'bg-gradient-to-br from-blue-50 to-blue-100/40 border border-blue-200';
+                          labelClass = 'text-[11px] text-blue-600';
+                          valueClass = isPrice ? 'text-base font-bold text-blue-700' : 'text-base font-bold text-blue-800';
+                        } else if (isAccent) {
+                          cardClass = 'bg-gradient-to-br from-amber-50 to-orange-50/50 border border-amber-200';
+                          labelClass = 'text-[11px] text-amber-600';
+                          valueClass = 'text-sm font-bold text-amber-800';
+                        }
 
-                          return (
-                            <div
-                              key={key}
-                              className="flex items-start gap-3 py-1.5 border-b border-gray-50 last:border-b-0"
-                            >
-                              <div className="text-xs text-gray-400 w-20 flex-shrink-0 pt-0.5">
-                                {field.label}
-                              </div>
-                              <div
-                                className={cn(
-                                  'text-sm font-semibold flex-1 leading-tight',
-                                  isPrice ? 'text-blue-600' : 'text-gray-800',
-                                )}
-                              >
-                                {renderFieldValue(field, value)}
-                              </div>
+                        const hasValue = value !== null
+                          && value !== undefined
+                          && value !== ''
+                          && !(Array.isArray(value) && value.length === 0);
+
+                        return (
+                          <div
+                            key={key}
+                            className={cn(
+                              'rounded-md px-3 py-2.5 transition-all hover:shadow-sm',
+                              cardClass,
+                            )}
+                          >
+                            <div className={cn('mb-1 font-medium', labelClass)}>
+                              {field.label}
                             </div>
-                          );
-                        })}
-                      </div>
-                    )}
+                            <div className={cn(
+                              'leading-tight min-h-[20px] flex items-center',
+                              valueClass,
+                              !hasValue && 'text-gray-300',
+                            )}>
+                              {renderFieldValue(field, value, isHighlight)}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
                 );
               })}
