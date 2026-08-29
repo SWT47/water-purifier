@@ -1,92 +1,75 @@
-import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { z } from 'zod';
-import { db } from '../db';
-import { comboScheme } from '../db/schema';
-import type { ComboScheme } from '@shared/api.interface';
-import { desc } from 'drizzle-orm';
+import { axiosForBackend } from '@lark-apaas/client-toolkit/utils/getAxiosForBackend';
+import { logger } from '@lark-apaas/client-toolkit/logger';
+import type {
+  ComboScheme,
+  ComboSchemeCreateInput,
+  ComboSchemeUpdateInput,
+} from '@shared/api.interface';
+import { listComboSchemes as listComboSchemesStatic } from './combo-schemes-static';
 
-const createSchema = z.object({
-  name: z.string().min(1, '方案名称不能为空'),
-  productIds: z.array(z.string()).min(1, '至少选择一个产品'),
-  livePrice: z.union([z.string(), z.number()]).nullable().optional(),
-});
-
-function rowToScheme(row: typeof comboScheme.$inferSelect): ComboScheme {
-  return {
-    id: row.id,
-    name: row.name,
-    productIds: row.productIds ?? [],
-    livePrice: row.livePrice ?? null,
-    createdAt: row.createdAt.toISOString(),
-    updatedAt: row.updatedAt.toISOString(),
-  };
-}
-
-function numericToString(
-  val: string | number | null | undefined,
-): string | null {
-  if (val === null || val === undefined) return null;
-  return String(val);
-}
-
-async function handleGet(req: VercelRequest, res: VercelResponse): Promise<void> {
+export async function listComboSchemes(): Promise<{ success: boolean; data: ComboScheme[]; message: string }> {
   try {
-    const rows = await db
-      .select()
-      .from(comboScheme)
-      .orderBy(desc(comboScheme.createdAt));
-
-    const result: ComboScheme[] = rows.map((row) => rowToScheme(row));
-    res.status(200).json(result);
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    res.status(500).json({ error: message });
-  }
-}
-
-async function handlePost(
-  req: VercelRequest,
-  res: VercelResponse,
-): Promise<void> {
-  try {
-    const body = req.body ?? {};
-    const parsed = createSchema.safeParse(body);
-
-    if (!parsed.success) {
-      res
-        .status(400)
-        .json({ error: '数据验证失败', details: parsed.error.errors });
-      return;
+    const response = await axiosForBackend({
+      url: '/openapi/combo-schemes',
+      method: 'GET',
+    });
+    if (response.status !== 200 || response.data?.success !== true) {
+      logger.warn(
+        `API 返回非成功状态 (${response.status})，使用静态数据 - 获取搭配方案列表`,
+      );
+      return listComboSchemesStatic();
     }
-
-    const { name, productIds, livePrice } = parsed.data;
-
-    const rows = await db
-      .insert(comboScheme)
-      .values({
-        name: name.trim(),
-        productIds,
-        livePrice: numericToString(livePrice),
-      })
-      .returning();
-
-    const newScheme = rowToScheme(rows[0]);
-    res.status(201).json(newScheme);
+    return response.data;
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    res.status(500).json({ error: message });
+    logger.warn('API 调用失败，使用静态数据 - 获取搭配方案列表', error);
+    return listComboSchemesStatic();
   }
 }
 
-export default async function handler(
-  req: VercelRequest,
-  res: VercelResponse,
-): Promise<void> {
-  if (req.method === 'GET') {
-    return handleGet(req, res);
-  } else if (req.method === 'POST') {
-    return handlePost(req, res);
-  } else {
-    res.status(405).json({ error: 'Method not allowed' });
+export async function createComboScheme(
+  input: ComboSchemeCreateInput,
+): Promise<{ success: boolean; data: ComboScheme; message: string }> {
+  try {
+    const response = await axiosForBackend({
+      url: '/api/combo-schemes',
+      method: 'POST',
+      data: input,
+    });
+    return response.data;
+  } catch (error) {
+    logger.error('创建搭配方案失败', error);
+    throw error;
+  }
+}
+
+export async function updateComboScheme(
+  id: string,
+  input: ComboSchemeUpdateInput,
+): Promise<{ success: boolean; data: ComboScheme; message: string }> {
+  try {
+    const response = await axiosForBackend({
+      url: `/api/combo-schemes/${id}`,
+      method: 'PUT',
+      data: input,
+    });
+    return response.data;
+  } catch (error) {
+    logger.error('更新搭配方案失败', error);
+    throw error;
+  }
+}
+
+export async function deleteComboScheme(
+  id: string,
+): Promise<{ success: boolean; data: null; message: string }> {
+  try {
+    const response = await axiosForBackend({
+      url: `/api/combo-schemes/${id}`,
+      method: 'DELETE',
+    });
+    return response.data;
+  } catch (error) {
+    logger.error('删除搭配方案失败', error);
+    throw error;
   }
 }
