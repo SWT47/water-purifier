@@ -1,0 +1,23 @@
+[
+  {
+    "path": "/app/app_17cxqt0h9gt/"
+  },
+  {
+    "path": "/app/app_17cxqt0h9gt/products/:category"
+  },
+  {
+    "path": "/app/app_17cxqt0h9gt/compare"
+  },
+  {
+    "path": "/app/app_17cxqt0h9gt/combo"
+  },
+  {
+    "path": "/app/app_17cxqt0h9gt/live"
+  },
+  {
+    "path": "/app/app_17cxqt0h9gt/live/:category"
+  },
+  {
+    "path": "/app/app_17cxqt0h9gt/live-combo"
+  }
+]
